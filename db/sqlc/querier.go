@@ -10,18 +10,25 @@ import (
 )
 
 type Querier interface {
+	CreateService(ctx context.Context, arg CreateServiceParams) (Service, error)
 	CreateServiceCategory(ctx context.Context, arg CreateServiceCategoryParams) (ServiceCategory, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteService(ctx context.Context, id int64) error
 	DeleteServiceCategory(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
+	GetServiceByID(ctx context.Context, id int64) (Service, error)
 	GetServiceCategoryByID(ctx context.Context, id int64) (ServiceCategory, error)
 	GetUserByIDFromAdmin(ctx context.Context, id int64) (User, error)
 	GetUserByIDFromUser(ctx context.Context, id int64) (interface{}, error)
 	ListServiceCategories(ctx context.Context, arg ListServiceCategoriesParams) ([]ServiceCategory, error)
+	ListServices(ctx context.Context, arg ListServicesParams) ([]Service, error)
+	ListServicesByCategory(ctx context.Context, categoryID int64) ([]Service, error)
+	ListServicesByTitle(ctx context.Context, dollar_1 sql.NullString) ([]Service, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	ListUsersByEmail(ctx context.Context, dollar_1 sql.NullString) ([]User, error)
 	ListUsersByRole(ctx context.Context, role NullRole) ([]User, error)
 	ListUsersByUsername(ctx context.Context, dollar_1 sql.NullString) ([]User, error)
+	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
 	UpdateServiceCategory(ctx context.Context, arg UpdateServiceCategoryParams) (ServiceCategory, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
