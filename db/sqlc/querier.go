@@ -11,6 +11,7 @@ import (
 
 type Querier interface {
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
+	CreatePayment(ctx context.Context, arg CreatePaymentParams) (Payment, error)
 	CreatePromoCode(ctx context.Context, arg CreatePromoCodeParams) (PromoCode, error)
 	CreateReview(ctx context.Context, arg CreateReviewParams) (Review, error)
 	CreateService(ctx context.Context, arg CreateServiceParams) (Service, error)
@@ -18,6 +19,7 @@ type Querier interface {
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteOrder(ctx context.Context, id int64) error
+	DeletePayment(ctx context.Context, id int64) error
 	DeletePromoCode(ctx context.Context, id int64) error
 	DeleteReview(ctx context.Context, id int64) error
 	DeleteService(ctx context.Context, id int64) error
@@ -25,6 +27,7 @@ type Querier interface {
 	DeleteSubscription(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
 	GetOrderByID(ctx context.Context, id int64) (Order, error)
+	GetPaymentByID(ctx context.Context, id int64) (Payment, error)
 	GetPromoCodeByID(ctx context.Context, id int64) (PromoCode, error)
 	GetPromoCodeByPartnerID(ctx context.Context, partnerID int64) (PromoCode, error)
 	GetReviewByID(ctx context.Context, id int64) (Review, error)
@@ -34,6 +37,7 @@ type Querier interface {
 	GetUserByIDFromAdmin(ctx context.Context, id int64) (User, error)
 	GetUserByIDFromUser(ctx context.Context, id int64) (interface{}, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
+	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error)
 	ListReviews(ctx context.Context, arg ListReviewsParams) ([]Review, error)
 	ListServiceCategories(ctx context.Context, arg ListServiceCategoriesParams) ([]ServiceCategory, error)
@@ -46,6 +50,7 @@ type Querier interface {
 	ListUsersByRole(ctx context.Context, role NullRole) ([]User, error)
 	ListUsersByUsername(ctx context.Context, dollar_1 sql.NullString) ([]User, error)
 	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)
+	UpdatePayment(ctx context.Context, arg UpdatePaymentParams) (Payment, error)
 	UpdatePromoCode(ctx context.Context, arg UpdatePromoCodeParams) (PromoCode, error)
 	UpdateReview(ctx context.Context, arg UpdateReviewParams) (Review, error)
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
