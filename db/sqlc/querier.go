@@ -12,12 +12,14 @@ import (
 type Querier interface {
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
 	CreatePromoCode(ctx context.Context, arg CreatePromoCodeParams) (PromoCode, error)
+	CreateReview(ctx context.Context, arg CreateReviewParams) (Review, error)
 	CreateService(ctx context.Context, arg CreateServiceParams) (Service, error)
 	CreateServiceCategory(ctx context.Context, arg CreateServiceCategoryParams) (ServiceCategory, error)
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteOrder(ctx context.Context, id int64) error
 	DeletePromoCode(ctx context.Context, id int64) error
+	DeleteReview(ctx context.Context, id int64) error
 	DeleteService(ctx context.Context, id int64) error
 	DeleteServiceCategory(ctx context.Context, id int64) error
 	DeleteSubscription(ctx context.Context, id int64) error
@@ -25,6 +27,7 @@ type Querier interface {
 	GetOrderByID(ctx context.Context, id int64) (Order, error)
 	GetPromoCodeByID(ctx context.Context, id int64) (PromoCode, error)
 	GetPromoCodeByPartnerID(ctx context.Context, partnerID int64) (PromoCode, error)
+	GetReviewByID(ctx context.Context, id int64) (Review, error)
 	GetServiceByID(ctx context.Context, id int64) (Service, error)
 	GetServiceCategoryByID(ctx context.Context, id int64) (ServiceCategory, error)
 	GetSubscriptionByID(ctx context.Context, id int64) (Subscription, error)
@@ -32,6 +35,7 @@ type Querier interface {
 	GetUserByIDFromUser(ctx context.Context, id int64) (interface{}, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
 	ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error)
+	ListReviews(ctx context.Context, arg ListReviewsParams) ([]Review, error)
 	ListServiceCategories(ctx context.Context, arg ListServiceCategoriesParams) ([]ServiceCategory, error)
 	ListServices(ctx context.Context, arg ListServicesParams) ([]Service, error)
 	ListServicesByCategory(ctx context.Context, categoryID int64) ([]Service, error)
@@ -43,6 +47,7 @@ type Querier interface {
 	ListUsersByUsername(ctx context.Context, dollar_1 sql.NullString) ([]User, error)
 	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)
 	UpdatePromoCode(ctx context.Context, arg UpdatePromoCodeParams) (PromoCode, error)
+	UpdateReview(ctx context.Context, arg UpdateReviewParams) (Review, error)
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
 	UpdateServiceCategory(ctx context.Context, arg UpdateServiceCategoryParams) (ServiceCategory, error)
 	UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error)
