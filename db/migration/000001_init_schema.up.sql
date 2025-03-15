@@ -12,7 +12,7 @@ CREATE TYPE "status_orders" AS ENUM (
 );
 CREATE TYPE "status_subscription" AS ENUM ('active', 'inactive', 'expired');
 CREATE TYPE "status_payment" AS ENUM ('pending', 'completed', 'failed');
-CREATE TABLE "Users" (
+CREATE TABLE "users" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "username" varchar NOT NULL,
     "email" varchar UNIQUE NOT NULL,
@@ -27,12 +27,12 @@ CREATE TABLE "Users" (
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z'
 );
-CREATE TABLE "ServiceCategories" (
+CREATE TABLE "service_categories" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "name" varchar NOT NULL,
     "description" text NOT NULL
 );
-CREATE TABLE "Service" (
+CREATE TABLE "services" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "provider_id" bigint NOT NULL,
     "category_id" bigint NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE "Service" (
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z'
 );
-CREATE TABLE "Orders" (
+CREATE TABLE "orders" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "client_id" bigint NOT NULL,
     "service_id" bigint NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE "Orders" (
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z'
 );
-CREATE TABLE "Subscriptions" (
+CREATE TABLE "subscriptions" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "provider_id" bigint NOT NULL,
     "start_date" date NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE "Subscriptions" (
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z'
 );
-CREATE TABLE "PromoCodes" (
+CREATE TABLE "promo_codes" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "partner_id" bigint NOT NULL,
     "code" varchar UNIQUE NOT NULL,
@@ -68,7 +68,7 @@ CREATE TABLE "PromoCodes" (
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z'
 );
-CREATE TABLE "Reviews" (
+CREATE TABLE "reviews" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "order_id" bigint UNIQUE NOT NULL,
     "client_id" bigint NOT NULL,
@@ -81,7 +81,7 @@ CREATE TABLE "Reviews" (
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z'
 );
-CREATE TABLE "Payment" (
+CREATE TABLE "payments" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "user_id" bigint NOT NULL,
     "amount" decimal(10, 2) NOT NULL,
@@ -90,41 +90,41 @@ CREATE TABLE "Payment" (
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z'
 );
-CREATE INDEX ON "Users" ("role");
-CREATE INDEX ON "Users" ("country", "city", "district");
-CREATE INDEX ON "ServiceCategories" ("name");
-CREATE INDEX ON "Service" ("provider_id");
-CREATE INDEX ON "Service" ("category_id");
-CREATE INDEX ON "Service" ("price");
-CREATE INDEX ON "Orders" ("client_id");
-CREATE INDEX ON "Orders" ("service_id");
-CREATE INDEX ON "Orders" ("status");
-CREATE INDEX ON "Subscriptions" ("provider_id");
-CREATE INDEX ON "Subscriptions" ("status");
-CREATE INDEX ON "PromoCodes" ("partner_id");
-CREATE INDEX ON "PromoCodes" ("code");
-CREATE INDEX ON "Reviews" ("order_id");
-CREATE INDEX ON "Reviews" ("client_id");
-CREATE INDEX ON "Reviews" ("provider_id");
-CREATE INDEX ON "Payment" ("user_id");
-CREATE INDEX ON "Payment" ("status");
-ALTER TABLE "Service"
-ADD FOREIGN KEY ("provider_id") REFERENCES "Users" ("id");
-ALTER TABLE "Service"
-ADD FOREIGN KEY ("category_id") REFERENCES "ServiceCategories" ("id");
-ALTER TABLE "Orders"
-ADD FOREIGN KEY ("client_id") REFERENCES "Users" ("id");
-ALTER TABLE "Orders"
-ADD FOREIGN KEY ("service_id") REFERENCES "Service" ("id");
-ALTER TABLE "Subscriptions"
-ADD FOREIGN KEY ("provider_id") REFERENCES "Users" ("id");
-ALTER TABLE "PromoCodes"
-ADD FOREIGN KEY ("partner_id") REFERENCES "Users" ("id");
-ALTER TABLE "Reviews"
-ADD FOREIGN KEY ("order_id") REFERENCES "Orders" ("id");
-ALTER TABLE "Reviews"
-ADD FOREIGN KEY ("client_id") REFERENCES "Users" ("id");
-ALTER TABLE "Reviews"
-ADD FOREIGN KEY ("provider_id") REFERENCES "Users" ("id");
-ALTER TABLE "Payment"
-ADD FOREIGN KEY ("user_id") REFERENCES "Users" ("id");
+CREATE INDEX ON "users" ("role");
+CREATE INDEX ON "users" ("country", "city", "district");
+CREATE INDEX ON "service_categories" ("name");
+CREATE INDEX ON "services" ("provider_id");
+CREATE INDEX ON "services" ("category_id");
+CREATE INDEX ON "services" ("price");
+CREATE INDEX ON "orders" ("client_id");
+CREATE INDEX ON "orders" ("service_id");
+CREATE INDEX ON "orders" ("status");
+CREATE INDEX ON "subscriptions" ("provider_id");
+CREATE INDEX ON "subscriptions" ("status");
+CREATE INDEX ON "promo_codes" ("partner_id");
+CREATE INDEX ON "promo_codes" ("code");
+CREATE INDEX ON "reviews" ("order_id");
+CREATE INDEX ON "reviews" ("client_id");
+CREATE INDEX ON "reviews" ("provider_id");
+CREATE INDEX ON "payments" ("user_id");
+CREATE INDEX ON "payments" ("status");
+ALTER TABLE "services"
+ADD FOREIGN KEY ("provider_id") REFERENCES "users" ("id");
+ALTER TABLE "services"
+ADD FOREIGN KEY ("category_id") REFERENCES "service_categories" ("id");
+ALTER TABLE "orders"
+ADD FOREIGN KEY ("client_id") REFERENCES "users" ("id");
+ALTER TABLE "orders"
+ADD FOREIGN KEY ("service_id") REFERENCES "services" ("id");
+ALTER TABLE "subscriptions"
+ADD FOREIGN KEY ("provider_id") REFERENCES "users" ("id");
+ALTER TABLE "promo_codes"
+ADD FOREIGN KEY ("partner_id") REFERENCES "users" ("id");
+ALTER TABLE "reviews"
+ADD FOREIGN KEY ("order_id") REFERENCES "orders" ("id");
+ALTER TABLE "reviews"
+ADD FOREIGN KEY ("client_id") REFERENCES "users" ("id");
+ALTER TABLE "reviews"
+ADD FOREIGN KEY ("provider_id") REFERENCES "users" ("id");
+ALTER TABLE "payments"
+ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
