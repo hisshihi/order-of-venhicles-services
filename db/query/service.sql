@@ -25,7 +25,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: UpdateService :one
 UPDATE services
-SET title = $2, description = $3, price = $4
+SET provider_id = $2, category_id = $3, title = $4, description = $5, price = $6
 WHERE id = $1
 RETURNING *;
 

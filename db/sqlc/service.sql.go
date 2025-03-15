@@ -198,13 +198,15 @@ func (q *Queries) ListServicesByTitle(ctx context.Context, dollar_1 sql.NullStri
 
 const updateService = `-- name: UpdateService :one
 UPDATE services
-SET title = $2, description = $3, price = $4
+SET provider_id = $2, category_id = $3, title = $4, description = $5, price = $6
 WHERE id = $1
 RETURNING id, provider_id, category_id, title, description, price, created_at, updated_at
 `
 
 type UpdateServiceParams struct {
 	ID          int64  `json:"id"`
+	ProviderID  int64  `json:"provider_id"`
+	CategoryID  int64  `json:"category_id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Price       string `json:"price"`
@@ -213,6 +215,8 @@ type UpdateServiceParams struct {
 func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error) {
 	row := q.db.QueryRowContext(ctx, updateService,
 		arg.ID,
+		arg.ProviderID,
+		arg.CategoryID,
 		arg.Title,
 		arg.Description,
 		arg.Price,
