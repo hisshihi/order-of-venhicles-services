@@ -17,7 +17,7 @@ CREATE TABLE "users" (
     "username" varchar NOT NULL,
     "email" varchar UNIQUE NOT NULL,
     "password_hash" varchar NOT NULL,
-    "password_change_at" timestamptz NOT NULL DEFAULT null,
+    "password_change_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z',
     "role" role,
     "country" varchar,
     "city" varchar,
