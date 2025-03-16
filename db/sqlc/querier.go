@@ -36,7 +36,7 @@ type Querier interface {
 	GetSubscriptionByID(ctx context.Context, id int64) (Subscription, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByIDFromAdmin(ctx context.Context, id int64) (User, error)
-	GetUserByIDFromUser(ctx context.Context, id int64) (interface{}, error)
+	GetUserByIDFromUser(ctx context.Context, id int64) (User, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
 	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error)

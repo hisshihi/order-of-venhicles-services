@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	ErrExpiredToken = errors.New("Время срока жизни токена истекло")
-	ErrInvalidToken = errors.New("Токен не действителен")
+	ErrExpiredToken = errors.New("время срока жизни токена истекло")
+	ErrInvalidToken = errors.New("токен не действителен")
 )
 
 type Payload struct {

@@ -28,7 +28,7 @@ SELECT * FROM users
 WHERE id = $1;
 
 -- name: GetUserByIDFromUser :one
-SELECT (username, email, country, city, district, phone, whatsapp) FROM users
+SELECT * FROM users
 WHERE id = $1
 LIMIT 1;
 
