@@ -30,7 +30,7 @@ WHERE id = $1;
 -- name: GetUserByIDFromUser :one
 SELECT (username, email, country, city, district, phone, whatsapp) FROM users
 WHERE id = $1
-AND role = 'client' LIMIT 1;
+LIMIT 1;
 
 -- name: ListUsersByUsername :many
 SELECT * FROM users

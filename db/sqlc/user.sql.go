@@ -118,7 +118,7 @@ func (q *Queries) GetUserByIDFromAdmin(ctx context.Context, id int64) (User, err
 const getUserByIDFromUser = `-- name: GetUserByIDFromUser :one
 SELECT (username, email, country, city, district, phone, whatsapp) FROM users
 WHERE id = $1
-AND role = 'client' LIMIT 1
+LIMIT 1
 `
 
 func (q *Queries) GetUserByIDFromUser(ctx context.Context, id int64) (interface{}, error) {
