@@ -9,7 +9,7 @@ WHERE id = $1;
 
 -- name: ListServiceCategories :many
 SELECT * FROM service_categories
-ORDER BY name DESC
+ORDER BY id ASC
 LIMIT $1 OFFSET $2;
 
 -- name: UpdateServiceCategory :one

@@ -46,7 +46,7 @@ func (q *Queries) GetServiceCategoryByID(ctx context.Context, id int64) (Service
 
 const listServiceCategories = `-- name: ListServiceCategories :many
 SELECT id, name FROM service_categories
-ORDER BY name DESC
+ORDER BY id ASC
 LIMIT $1 OFFSET $2
 `
 

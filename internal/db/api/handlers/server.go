@@ -104,6 +104,11 @@ func (server *Server) setupServer() {
 	adminRoutes.Use(server.authMiddleware())
 	adminRoutes.Use(server.roleCheckMiddleware(string(sqlc.RoleAdmin)))
 	adminRoutes.GET("/users/:id", server.getUserByID) // Доступ к данным пользователя по ID
+	adminRoutes.POST("/category", server.createCategory)
+	adminRoutes.GET("/category/:id", server.getCategoryByID)
+	adminRoutes.GET("/category", server.listCategory)
+	adminRoutes.PUT("/category/:id", server.updateCategory)
+	adminRoutes.DELETE("/category/:id", server.deleteCategory)
 	// Здесь можно добавить другие маршруты для администраторов
 	// adminRoutes.GET("/users", server.listAllUsers)
 
