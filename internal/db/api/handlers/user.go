@@ -39,8 +39,6 @@ type createUserResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
-// TODO: При создании добавить возвращение токена
-
 func (server *Server) createUser(ctx *gin.Context) {
 	var req createUserParams
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -129,7 +127,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 			City:     &user.City.String,
 			District: &user.District.String,
 			Phone:    user.Phone,
-			Whatsapp: user.Whatsapp,	
+			Whatsapp: user.Whatsapp,
 		},
 		AccessToken: accessToken,
 	}
