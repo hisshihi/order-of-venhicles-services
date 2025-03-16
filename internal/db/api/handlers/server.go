@@ -37,6 +37,12 @@ func NewServer(config config.Config, store *db.Store) (*Server, error) {
 		store:  store,
 		maker:  tokenMaker,
 	}
+
+	server.setupServer()
+	return server, nil
+}
+
+func (server *Server) setupServer() {
 	router := gin.Default()
 
 	// Настраиваем доверенные прокси
@@ -99,7 +105,6 @@ func NewServer(config config.Config, store *db.Store) (*Server, error) {
 	// adminRoutes.GET("/users", server.listAllUsers)
 
 	server.router = router
-	return server, nil
 }
 
 func (server *Server) Start(address string) error {
