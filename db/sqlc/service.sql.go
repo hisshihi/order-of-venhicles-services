@@ -77,6 +77,27 @@ func (q *Queries) GetServiceByID(ctx context.Context, id int64) (Service, error)
 	return i, err
 }
 
+const getServiceByProviderID = `-- name: GetServiceByProviderID :one
+SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
+WHERE provider_id = $1
+`
+
+func (q *Queries) GetServiceByProviderID(ctx context.Context, providerID int64) (Service, error) {
+	row := q.db.QueryRowContext(ctx, getServiceByProviderID, providerID)
+	var i Service
+	err := row.Scan(
+		&i.ID,
+		&i.ProviderID,
+		&i.CategoryID,
+		&i.Title,
+		&i.Description,
+		&i.Price,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listServices = `-- name: ListServices :many
 SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
 ORDER BY title DESC
@@ -124,10 +145,62 @@ const listServicesByCategory = `-- name: ListServicesByCategory :many
 SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
 WHERE category_id = $1
 ORDER BY title
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) ListServicesByCategory(ctx context.Context, categoryID int64) ([]Service, error) {
-	rows, err := q.db.QueryContext(ctx, listServicesByCategory, categoryID)
+type ListServicesByCategoryParams struct {
+	CategoryID int64 `json:"category_id"`
+	Limit      int64 `json:"limit"`
+	Offset     int64 `json:"offset"`
+}
+
+func (q *Queries) ListServicesByCategory(ctx context.Context, arg ListServicesByCategoryParams) ([]Service, error) {
+	rows, err := q.db.QueryContext(ctx, listServicesByCategory, arg.CategoryID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Service{}
+	for rows.Next() {
+		var i Service
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProviderID,
+			&i.CategoryID,
+			&i.Title,
+			&i.Description,
+			&i.Price,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServicesByProviderID = `-- name: ListServicesByProviderID :many
+SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
+WHERE provider_id = $1
+ORDER BY title
+LIMIT $2 OFFSET $3
+`
+
+type ListServicesByProviderIDParams struct {
+	ProviderID int64 `json:"provider_id"`
+	Limit      int64 `json:"limit"`
+	Offset     int64 `json:"offset"`
+}
+
+func (q *Queries) ListServicesByProviderID(ctx context.Context, arg ListServicesByProviderIDParams) ([]Service, error) {
+	rows, err := q.db.QueryContext(ctx, listServicesByProviderID, arg.ProviderID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -162,10 +235,17 @@ const listServicesByTitle = `-- name: ListServicesByTitle :many
 SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
 WHERE title ILIKE '%' || $1 || '%'
 ORDER BY title
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) ListServicesByTitle(ctx context.Context, dollar_1 sql.NullString) ([]Service, error) {
-	rows, err := q.db.QueryContext(ctx, listServicesByTitle, dollar_1)
+type ListServicesByTitleParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	Limit   int64          `json:"limit"`
+	Offset  int64          `json:"offset"`
+}
+
+func (q *Queries) ListServicesByTitle(ctx context.Context, arg ListServicesByTitleParams) ([]Service, error) {
+	rows, err := q.db.QueryContext(ctx, listServicesByTitle, arg.Column1, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

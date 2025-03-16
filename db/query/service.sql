@@ -7,15 +7,27 @@ RETURNING *;
 SELECT * FROM services
 WHERE id = $1;
 
+-- name: GetServiceByProviderID :one
+SELECT * FROM services
+WHERE provider_id = $1;
+
+-- name: ListServicesByProviderID :many
+SELECT * FROM services
+WHERE provider_id = $1
+ORDER BY title
+LIMIT $2 OFFSET $3;
+
 -- name: ListServicesByTitle :many
 SELECT * FROM services
 WHERE title ILIKE '%' || $1 || '%'
-ORDER BY title;
+ORDER BY title
+LIMIT $2 OFFSET $3;
 
 -- name: ListServicesByCategory :many
 SELECT * FROM services
 WHERE category_id = $1
-ORDER BY title;
+ORDER BY title
+LIMIT $2 OFFSET $3;
 
 
 -- name: ListServices :many
