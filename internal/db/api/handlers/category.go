@@ -14,6 +14,7 @@ type categoryRequest struct {
 }
 
 type categoryRespons struct {
+	ID int64 `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -38,6 +39,7 @@ func (server *Server) createCategory(ctx *gin.Context) {
 	}
 
 	rsp := categoryRespons{
+		ID: category.ID,
 		Name: category.Name,
 	}
 
