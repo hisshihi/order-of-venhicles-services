@@ -55,6 +55,26 @@ func (q *Queries) DeleteReview(ctx context.Context, id int64) error {
 	return err
 }
 
+const getProviderOverallRating = `-- name: GetProviderOverallRating :one
+SELECT provider_id, AVG(rating) AS overall_rating, COUNT(*) AS review_count
+FROM reviews
+WHERE provider_id = $1
+GROUP BY provider_id
+`
+
+type GetProviderOverallRatingRow struct {
+	ProviderID    int64  `json:"provider_id"`
+	OverallRating string `json:"overall_rating"`
+	ReviewCount   int64  `json:"review_count"`
+}
+
+func (q *Queries) GetProviderOverallRating(ctx context.Context, providerID int64) (GetProviderOverallRatingRow, error) {
+	row := q.db.QueryRowContext(ctx, getProviderOverallRating, providerID)
+	var i GetProviderOverallRatingRow
+	err := row.Scan(&i.ProviderID, &i.OverallRating, &i.ReviewCount)
+	return i, err
+}
+
 const getReviewByID = `-- name: GetReviewByID :one
 SELECT id, order_id, client_id, provider_id, rating, comment, created_at, updated_at FROM reviews
 WHERE id = $1
@@ -76,19 +96,21 @@ func (q *Queries) GetReviewByID(ctx context.Context, id int64) (Review, error) {
 	return i, err
 }
 
-const listReviews = `-- name: ListReviews :many
+const listReviewsByProviderID = `-- name: ListReviewsByProviderID :many
 SELECT id, order_id, client_id, provider_id, rating, comment, created_at, updated_at FROM reviews
+WHERE provider_id = $1
 ORDER BY created_at DESC
-LIMIT $1 OFFSET $2
+LIMIT $2 OFFSET $3
 `
 
-type ListReviewsParams struct {
-	Limit  int64 `json:"limit"`
-	Offset int64 `json:"offset"`
+type ListReviewsByProviderIDParams struct {
+	ProviderID int64 `json:"provider_id"`
+	Limit      int64 `json:"limit"`
+	Offset     int64 `json:"offset"`
 }
 
-func (q *Queries) ListReviews(ctx context.Context, arg ListReviewsParams) ([]Review, error) {
-	rows, err := q.db.QueryContext(ctx, listReviews, arg.Limit, arg.Offset)
+func (q *Queries) ListReviewsByProviderID(ctx context.Context, arg ListReviewsByProviderIDParams) ([]Review, error) {
+	rows, err := q.db.QueryContext(ctx, listReviewsByProviderID, arg.ProviderID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

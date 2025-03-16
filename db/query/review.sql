@@ -7,11 +7,17 @@ RETURNING *;
 SELECT * FROM reviews
 WHERE id = $1;
 
--- name: ListReviews :many
+-- name: ListReviewsByProviderID :many
 SELECT * FROM reviews
+WHERE provider_id = $1
 ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+LIMIT $2 OFFSET $3;
 
+-- name: GetProviderOverallRating :one
+SELECT provider_id, AVG(rating) AS overall_rating, COUNT(*) AS review_count
+FROM reviews
+WHERE provider_id = $1
+GROUP BY provider_id;
 
 -- name: UpdateReview :one
 UPDATE reviews

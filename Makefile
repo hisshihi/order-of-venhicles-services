@@ -10,6 +10,12 @@ migrateup:
 migratedown:
 	migrate -path db/migration -database "postgresql://root:secret@localhost:5432/order_services?sslmode=disable" -verbose down
 
+migrateup1:
+	migrate -path db/migration -database "postgresql://root:secret@localhost:5432/order_services?sslmode=disable" -verbose up 1
+
+migratedown1:
+	migrate -path db/migration -database "postgresql://root:secret@localhost:5432/order_services?sslmode=disable" -verbose down 1
+
 sqlc:
 	sqlc generate
 
@@ -19,4 +25,4 @@ test:
 server:
 	go run cmd/main.go
 
-.PHONY: createdb dropdb migrateup migratedown sqlc test server
+.PHONY: createdb dropdb migrateup migratedown migratedown1 migrateup1 sqlc test server 
