@@ -134,24 +134,40 @@ func (server *Server) authMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		fiels := strings.Fields(authorizationHeader)
-		if len(fiels) < 2 {
+		fields := strings.Fields(authorizationHeader)
+		if len(fields) < 2 {
 			err := errors.New("неверный формат заголовка")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
 			return
 		}
 
-		authorizationType := strings.ToLower(fiels[0])
+		authorizationType := strings.ToLower(fields[0])
 		if authorizationType != authorizationTypeBearer {
 			err := fmt.Errorf("неподдерживаемый тип авторизации %s", authorizationType)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
 			return
 		}
 
-		accessToken := fiels[1]
+		accessToken := fields[1]
 		payload, err := server.maker.VerifyToken(accessToken)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(err))
+			// Более информативные сообщения в зависимости от типа ошибки
+			var errorMsg string
+			if errors.Is(err, util.ErrExpiredToken) {
+				errorMsg = "срок действия токена истек, необходимо пройти авторизацию повторно"
+			} else if errors.Is(err, util.ErrInvalidToken) {
+				errorMsg = "недействительный токен"
+			} else {
+				errorMsg = fmt.Sprintf("ошибка проверки токена: %v", err)
+			}
+			c.AbortWithStatusJSON(http.StatusUnauthorized, errorResponse(errors.New(errorMsg)))
+			return
+		}
+
+		// Двойная проверка срока действия токена на уровне middleware
+		if err := payload.Valid(); err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				errorResponse(errors.New("срок действия токена истек, необходимо пройти авторизацию повторно")))
 			return
 		}
 

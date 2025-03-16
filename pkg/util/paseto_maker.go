@@ -43,5 +43,9 @@ func (maker *PasetoMaker) VerifyToken(token string) (*Payload, error) {
 		return nil, err
 	}
 
+	if err := payload.Valid(); err != nil {
+		return nil, err
+	}
+
 	return payload, nil
 }
