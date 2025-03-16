@@ -19,6 +19,7 @@ type createServiceRequest struct {
 }
 
 type createServiceResponse struct {
+	ID          int64  `json:"id"`
 	ProviderID  int64  `json:"provider_id"`
 	CategoryID  int64  `json:"category_id"`
 	Title       string `json:"title"`
@@ -61,6 +62,7 @@ func (server *Server) createService(ctx *gin.Context) {
 	}
 
 	rsp := createServiceResponse{
+		ID:          service.ID,
 		ProviderID:  service.ProviderID,
 		CategoryID:  service.CategoryID,
 		Title:       service.Title,
@@ -88,6 +90,7 @@ func (server *Server) getServiceByProviderID(ctx *gin.Context) {
 	}
 
 	rsp := createServiceResponse{
+		ID:          service.ID,
 		ProviderID:  service.ProviderID,
 		CategoryID:  service.CategoryID,
 		Title:       service.Title,
@@ -120,6 +123,7 @@ func (server *Server) getServiceByID(ctx *gin.Context) {
 	}
 
 	rsp := createServiceResponse{
+		ID:          service.ID,
 		ProviderID:  service.ProviderID,
 		CategoryID:  service.CategoryID,
 		Title:       service.Title,
