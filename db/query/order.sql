@@ -9,8 +9,9 @@ WHERE id = $1;
 
 -- name: ListOrders :many
 SELECT * FROM orders
+WHERE client_id = $1
 ORDER BY created_at DESC
-LIMIT $1 OFFSET $2;
+LIMIT $2 OFFSET $3;
 
 -- name: UpdateOrder :one
 UPDATE orders

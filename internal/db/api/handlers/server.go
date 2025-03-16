@@ -82,7 +82,9 @@ func (server *Server) setupServer() {
 		string(sqlc.RoleAdmin),
 	))
 	// Добавьте здесь маршруты для клиентов
-	// clientRoutes.POST("/orders", server.createOrder)
+	clientRoutes.POST("/orders", server.createOrder)
+	clientRoutes.GET("/orders/:id", server.getOrderByID)
+	clientRoutes.GET("/orders/", server.listOrders)
 
 	// Маршруты для поставщиков услуг
 	providerRoutes := router.Group("/provider")
