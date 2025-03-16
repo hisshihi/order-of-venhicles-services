@@ -13,7 +13,7 @@ import (
 )
 
 type createUserParams struct {
-	Username     string  `json:"username" binding:"required,alphanum"`
+	Username     string  `json:"username" binding:"required"`
 	Email        string  `json:"email" binding:"required,email"`
 	PasswordHash string  `json:"password_hash" binding:"min=6"`
 	Country      *string `json:"country,omitempty"`
