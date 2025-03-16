@@ -34,6 +34,7 @@ type Querier interface {
 	GetServiceByID(ctx context.Context, id int64) (Service, error)
 	GetServiceCategoryByID(ctx context.Context, id int64) (ServiceCategory, error)
 	GetSubscriptionByID(ctx context.Context, id int64) (Subscription, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByIDFromAdmin(ctx context.Context, id int64) (User, error)
 	GetUserByIDFromUser(ctx context.Context, id int64) (interface{}, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)

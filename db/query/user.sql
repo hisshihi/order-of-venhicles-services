@@ -32,6 +32,11 @@ SELECT (username, email, country, city, district, phone, whatsapp) FROM users
 WHERE id = $1
 LIMIT 1;
 
+-- name: GetUserByEmail :one
+SELECT * FROM users
+WHERE email = $1
+LIMIT 1;
+
 -- name: ListUsersByUsername :many
 SELECT * FROM users
 WHERE username ILIKE '%' || $1 || '%'
