@@ -87,7 +87,7 @@ func (server *Server) setupServer() {
 		string(sqlc.RoleAdmin),
 	))
 	// Добавьте здесь маршруты для поставщиков
-	// providerRoutes.POST("/services", server.createService)
+	providerRoutes.POST("/services", server.createService)
 
 	// Маршруты для партнеров
 	partnerRoutes := router.Group("/partner")
@@ -268,4 +268,36 @@ func (server *Server) createAdminDefault() error {
 	fmt.Println("Администратор успешно создан")
 	fmt.Println("--------------------------")
 	return nil
+}
+
+
+func (server *Server) getUserDataFromToken(ctx *gin.Context) (sqlc.User, error) {
+	// Получаем payload из токена авторизации
+	payload, exists := ctx.Get(authorizationPayloadKey)
+	if !exists {
+		err := errors.New("требуется авторизация")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return sqlc.User{}, err
+	}
+
+	// Приводим payload к нужному типу
+	tokenPayload, ok := payload.(*util.Payload)
+	if !ok {
+		err := errors.New("неверный тип payload")
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return sqlc.User{}, err
+	}
+
+	// Получаем пользователя по ID из токена
+	user, err := server.store.GetUserByIDFromUser(ctx, tokenPayload.UserID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return sqlc.User{}, err
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return sqlc.User{}, err
+	}
+
+	return user, nil
 }

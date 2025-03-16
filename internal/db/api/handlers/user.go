@@ -193,30 +193,8 @@ type getCurrentUserResponse struct {
 }
 
 func (server *Server) getCurrentUser(ctx *gin.Context) {
-	// Получаем payload из токена авторизации
-	payload, exists := ctx.Get(authorizationPayloadKey)
-	if !exists {
-		err := errors.New("требуется авторизация")
-		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
-		return
-	}
-
-	// Приводим payload к нужному типу
-	tokenPayload, ok := payload.(*util.Payload)
-	if !ok {
-		err := errors.New("неверный тип payload")
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
-	// Получаем пользователя по ID из токена
-	user, err := server.store.GetUserByIDFromUser(ctx, tokenPayload.UserID)
+	user, err := server.getUserDataFromToken(ctx)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
