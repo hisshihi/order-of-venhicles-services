@@ -14,7 +14,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: UpdateSubscription :one
 UPDATE subscriptions
-SET provider_id = $2, start_date = $3, end_date = $4, status = $5
+SET provider_id = $2, start_date = $3, end_date = $4, status = $5, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 

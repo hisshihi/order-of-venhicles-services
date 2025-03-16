@@ -14,7 +14,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: UpdatePayment :one
 UPDATE payments
-SET user_id = $2, amount = $3, payment_method = $4, status = $5
+SET user_id = $2, amount = $3, payment_method = $4, status = $5, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 

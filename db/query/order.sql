@@ -14,7 +14,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: UpdateOrder :one
 UPDATE orders
-SET client_id = $2, service_id = $3, status = $4
+SET client_id = $2, service_id = $3, status = $4, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 

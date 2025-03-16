@@ -15,7 +15,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: UpdateReview :one
 UPDATE reviews
-SET rating = $2, comment = $3
+SET rating = $2, comment = $3, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 

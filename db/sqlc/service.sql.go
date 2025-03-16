@@ -278,7 +278,7 @@ func (q *Queries) ListServicesByTitle(ctx context.Context, arg ListServicesByTit
 
 const updateService = `-- name: UpdateService :one
 UPDATE services
-SET provider_id = $2, category_id = $3, title = $4, description = $5, price = $6
+SET provider_id = $2, category_id = $3, title = $4, description = $5, price = $6, updated_at = NOW()
 WHERE id = $1
 RETURNING id, provider_id, category_id, title, description, price, created_at, updated_at
 `

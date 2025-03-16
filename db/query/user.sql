@@ -65,7 +65,8 @@ SET username = $2,
     city = $5,
     district = $6,
     phone = $7,
-    whatsapp = $8
+    whatsapp = $8,
+    updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 

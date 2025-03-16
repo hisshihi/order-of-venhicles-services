@@ -117,7 +117,7 @@ func (q *Queries) ListSubscriptions(ctx context.Context, arg ListSubscriptionsPa
 
 const updateSubscription = `-- name: UpdateSubscription :one
 UPDATE subscriptions
-SET provider_id = $2, start_date = $3, end_date = $4, status = $5
+SET provider_id = $2, start_date = $3, end_date = $4, status = $5, updated_at = NOW()
 WHERE id = $1
 RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at
 `

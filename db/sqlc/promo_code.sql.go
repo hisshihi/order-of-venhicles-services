@@ -137,7 +137,7 @@ func (q *Queries) ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) 
 
 const updatePromoCode = `-- name: UpdatePromoCode :one
 UPDATE promo_codes
-SET partner_id = $2, code = $3, discount_percentage = $4, valid_until = $5
+SET partner_id = $2, code = $3, discount_percentage = $4, valid_until = $5, updated_at = NOW()
 WHERE id = $1
 RETURNING id, partner_id, code, discount_percentage, valid_until, created_at, updated_at
 `

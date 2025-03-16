@@ -354,7 +354,8 @@ SET username = $2,
     city = $5,
     district = $6,
     phone = $7,
-    whatsapp = $8
+    whatsapp = $8,
+    updated_at = NOW()
 WHERE id = $1
 RETURNING id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at
 `

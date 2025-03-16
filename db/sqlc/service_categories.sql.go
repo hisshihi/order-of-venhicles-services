@@ -12,13 +12,18 @@ import (
 const createServiceCategory = `-- name: CreateServiceCategory :one
 INSERT INTO service_categories (name)
 VALUES ($1)
-RETURNING id, name
+RETURNING id, name, created_at, updated_at
 `
 
 func (q *Queries) CreateServiceCategory(ctx context.Context, name string) (ServiceCategory, error) {
 	row := q.db.QueryRowContext(ctx, createServiceCategory, name)
 	var i ServiceCategory
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
@@ -33,19 +38,24 @@ func (q *Queries) DeleteServiceCategory(ctx context.Context, id int64) error {
 }
 
 const getServiceCategoryByID = `-- name: GetServiceCategoryByID :one
-SELECT id, name FROM service_categories
+SELECT id, name, created_at, updated_at FROM service_categories
 WHERE id = $1
 `
 
 func (q *Queries) GetServiceCategoryByID(ctx context.Context, id int64) (ServiceCategory, error) {
 	row := q.db.QueryRowContext(ctx, getServiceCategoryByID, id)
 	var i ServiceCategory
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
 const listServiceCategories = `-- name: ListServiceCategories :many
-SELECT id, name FROM service_categories
+SELECT id, name, created_at, updated_at FROM service_categories
 ORDER BY id ASC
 LIMIT $1 OFFSET $2
 `
@@ -64,7 +74,12 @@ func (q *Queries) ListServiceCategories(ctx context.Context, arg ListServiceCate
 	items := []ServiceCategory{}
 	for rows.Next() {
 		var i ServiceCategory
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -80,9 +95,9 @@ func (q *Queries) ListServiceCategories(ctx context.Context, arg ListServiceCate
 
 const updateServiceCategory = `-- name: UpdateServiceCategory :one
 UPDATE service_categories
-SET name = $2
+SET name = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, name
+RETURNING id, name, created_at, updated_at
 `
 
 type UpdateServiceCategoryParams struct {
@@ -93,6 +108,11 @@ type UpdateServiceCategoryParams struct {
 func (q *Queries) UpdateServiceCategory(ctx context.Context, arg UpdateServiceCategoryParams) (ServiceCategory, error) {
 	row := q.db.QueryRowContext(ctx, updateServiceCategory, arg.ID, arg.Name)
 	var i ServiceCategory
-	err := row.Scan(&i.ID, &i.Name)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }

@@ -121,7 +121,7 @@ func (q *Queries) ListReviews(ctx context.Context, arg ListReviewsParams) ([]Rev
 
 const updateReview = `-- name: UpdateReview :one
 UPDATE reviews
-SET rating = $2, comment = $3
+SET rating = $2, comment = $3, updated_at = NOW()
 WHERE id = $1
 RETURNING id, order_id, client_id, provider_id, rating, comment, created_at, updated_at
 `

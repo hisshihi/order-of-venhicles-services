@@ -19,7 +19,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: UpdatePromoCode :one
 UPDATE promo_codes
-SET partner_id = $2, code = $3, discount_percentage = $4, valid_until = $5
+SET partner_id = $2, code = $3, discount_percentage = $4, valid_until = $5, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 

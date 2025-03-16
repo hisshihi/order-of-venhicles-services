@@ -116,7 +116,7 @@ func (q *Queries) ListPayments(ctx context.Context, arg ListPaymentsParams) ([]P
 
 const updatePayment = `-- name: UpdatePayment :one
 UPDATE payments
-SET user_id = $2, amount = $3, payment_method = $4, status = $5
+SET user_id = $2, amount = $3, payment_method = $4, status = $5, updated_at = NOW()
 WHERE id = $1
 RETURNING id, user_id, amount, payment_method, status, created_at, updated_at
 `

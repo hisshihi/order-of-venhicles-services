@@ -107,7 +107,7 @@ func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order
 
 const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
-SET client_id = $2, service_id = $3, status = $4
+SET client_id = $2, service_id = $3, status = $4, updated_at = NOW()
 WHERE id = $1
 RETURNING id, client_id, service_id, status, created_at, updated_at
 `

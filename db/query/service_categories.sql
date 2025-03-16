@@ -14,7 +14,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: UpdateServiceCategory :one
 UPDATE service_categories
-SET name = $2
+SET name = $2, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
