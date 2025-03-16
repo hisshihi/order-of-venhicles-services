@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,6 +13,7 @@ import (
 	"github.com/hisshihi/order-of-venhicles-services/internal/config"
 	"github.com/hisshihi/order-of-venhicles-services/internal/db"
 	"github.com/hisshihi/order-of-venhicles-services/pkg/util"
+	"github.com/lib/pq"
 )
 
 const (
@@ -105,6 +108,12 @@ func (server *Server) setupServer() {
 	// adminRoutes.GET("/users", server.listAllUsers)
 
 	server.router = router
+
+	// Создаем администратора по умолчанию при инициализации сервера
+	if err := server.createAdminDefault(); err != nil {
+		// Логируем ошибку, но не прерываем инициализацию сервера
+		fmt.Printf("Не удалось создать администратора по умолчанию: %v\n", err)
+	}
 }
 
 func (server *Server) Start(address string) error {
@@ -187,4 +196,55 @@ func (server *Server) roleCheckMiddleware(allowedRoles ...string) gin.HandlerFun
 
 		c.Next()
 	}
+}
+
+type createAdminDefaultParam struct {
+	Username     string  `json:"username"`
+	Email        string  `json:"email" `
+	PasswordHash string  `json:"password_hash"`
+	Country      *string `json:"country"`
+	City         *string `json:"city"`
+	District     *string `json:"district"`
+	Phone        string  `json:"phone"`
+	Whatsapp     string  `json:"whatsapp"`
+	Role         *string `json:"role"`
+}
+
+// Создание администратора по умолчанию
+func (server *Server) createAdminDefault() error {
+	hashedPassword, err := util.HashPassword(server.config.AdminPassword)
+	if err != nil {
+		return fmt.Errorf("ошибка при хэшировании пароля: %w", err)
+	}
+
+	arg := sqlc.CreateUserParams{
+		Username:     server.config.AdminUsername,
+		Email:        server.config.AdminEmail,
+		PasswordHash: hashedPassword,
+		Country:      sql.NullString{},
+		City:         sql.NullString{},
+		District:     sql.NullString{},
+		Phone:        "+7-(999)-999-99-99",
+		Whatsapp:     "+7-(999)-999-99-99",
+		Role:         sqlc.NullRole{Role: sqlc.RoleAdmin, Valid: true},
+	}
+
+	// Создаем администратора в базе данных
+	_, err = server.store.CreateUser(context.Background(), arg)
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code.Name() {
+			case "unique_violation":
+				// Администратор уже существует - это не ошибка при инициализации
+				fmt.Println("Администратор уже существует в системе")
+				return nil
+			}
+		}
+		return fmt.Errorf("ошибка при создании администратора: %w", err)
+	}
+
+	fmt.Println("--------------------------")
+	fmt.Println("Администратор успешно создан")
+	fmt.Println("--------------------------")
+	return nil
 }
