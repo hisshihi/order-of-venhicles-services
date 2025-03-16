@@ -24,14 +24,19 @@ type createUserParams struct {
 	Role         *string `json:"role,omitempty"`
 }
 
+type User struct {
+	Username string  `json:"username"`
+	Email    string  `json:"email"`
+	Country  *string `json:"country"`
+	City     *string `json:"city"`
+	District *string `json:"district"`
+	Phone    string  `json:"phone"`
+	Whatsapp string  `json:"whatsapp"`
+}
+
 type createUserResponse struct {
-	Username string  `json:"username" binding:"required,alphanum"`
-	Email    string  `json:"email" binding:"required,email"`
-	Country  *string `json:"country,omitempty"`
-	City     *string `json:"city,omitempty"`
-	District *string `json:"district,omitempty"`
-	Phone    string  `json:"phone" binding:"required"`
-	Whatsapp string  `json:"whatsapp" binding:"required"`
+	User        User   `json:"user"`
+	AccessToken string `json:"access_token"`
 }
 
 // TODO: При создании добавить возвращение токена
@@ -110,14 +115,23 @@ func (server *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
+	accessToken, err := server.maker.CreateToken(user.ID, user.Email, string(user.Role.Role), server.config.AccessTokenDuration)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	rsp := createUserResponse{
-		Username: user.Username,
-		Email:    user.Email,
-		Country:  &user.Country.String,
-		City:     &user.City.String,
-		District: &user.District.String,
-		Phone:    user.Phone,
-		Whatsapp: user.Whatsapp,
+		User: User{
+			Username: user.Username,
+			Email:    user.Email,
+			Country:  &user.Country.String,
+			City:     &user.City.String,
+			District: &user.District.String,
+			Phone:    user.Phone,
+			Whatsapp: user.Whatsapp,	
+		},
+		AccessToken: accessToken,
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
@@ -171,13 +185,13 @@ func (server *Server) loginUser(ctx *gin.Context) {
 }
 
 type getCurrentUserResponse struct {
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Country   string    `json:"country,omitempty"`
-	City      string    `json:"city,omitempty"`
-	District  string    `json:"district,omitempty"`
-	Phone     string    `json:"phone"`
-	Whatsapp  string    `json:"whatsapp"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Country  string `json:"country,omitempty"`
+	City     string `json:"city,omitempty"`
+	District string `json:"district,omitempty"`
+	Phone    string `json:"phone"`
+	Whatsapp string `json:"whatsapp"`
 }
 
 func (server *Server) getCurrentUser(ctx *gin.Context) {
@@ -210,12 +224,12 @@ func (server *Server) getCurrentUser(ctx *gin.Context) {
 
 	// Создаем безопасный ответ без хеша пароля
 	rsp := getCurrentUserResponse{
-		Email: user.Email,
+		Email:    user.Email,
 		Username: user.Username,
-		Country: user.Country.String,
-		City: user.City.String,
+		Country:  user.Country.String,
+		City:     user.City.String,
 		District: user.District.String,
-		Phone: user.Phone,
+		Phone:    user.Phone,
 		Whatsapp: user.Whatsapp,
 	}
 
