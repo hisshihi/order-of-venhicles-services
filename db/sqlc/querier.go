@@ -15,7 +15,7 @@ type Querier interface {
 	CreatePromoCode(ctx context.Context, arg CreatePromoCodeParams) (PromoCode, error)
 	CreateReview(ctx context.Context, arg CreateReviewParams) (Review, error)
 	CreateService(ctx context.Context, arg CreateServiceParams) (Service, error)
-	CreateServiceCategory(ctx context.Context, arg CreateServiceCategoryParams) (ServiceCategory, error)
+	CreateServiceCategory(ctx context.Context, name string) (ServiceCategory, error)
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteOrder(ctx context.Context, id int64) error

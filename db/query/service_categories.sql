@@ -1,6 +1,6 @@
 -- name: CreateServiceCategory :one
-INSERT INTO service_categories (name, description)
-VALUES ($1, $2)
+INSERT INTO service_categories (name)
+VALUES ($1)
 RETURNING *;
 
 -- name: GetServiceCategoryByID :one
@@ -14,7 +14,7 @@ LIMIT $1 OFFSET $2;
 
 -- name: UpdateServiceCategory :one
 UPDATE service_categories
-SET name = $2, description = $3
+SET name = $2
 WHERE id = $1
 RETURNING *;
 

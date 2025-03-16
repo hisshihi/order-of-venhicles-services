@@ -10,20 +10,15 @@ import (
 )
 
 const createServiceCategory = `-- name: CreateServiceCategory :one
-INSERT INTO service_categories (name, description)
-VALUES ($1, $2)
-RETURNING id, name, description
+INSERT INTO service_categories (name)
+VALUES ($1)
+RETURNING id, name
 `
 
-type CreateServiceCategoryParams struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-func (q *Queries) CreateServiceCategory(ctx context.Context, arg CreateServiceCategoryParams) (ServiceCategory, error) {
-	row := q.db.QueryRowContext(ctx, createServiceCategory, arg.Name, arg.Description)
+func (q *Queries) CreateServiceCategory(ctx context.Context, name string) (ServiceCategory, error) {
+	row := q.db.QueryRowContext(ctx, createServiceCategory, name)
 	var i ServiceCategory
-	err := row.Scan(&i.ID, &i.Name, &i.Description)
+	err := row.Scan(&i.ID, &i.Name)
 	return i, err
 }
 
@@ -38,19 +33,19 @@ func (q *Queries) DeleteServiceCategory(ctx context.Context, id int64) error {
 }
 
 const getServiceCategoryByID = `-- name: GetServiceCategoryByID :one
-SELECT id, name, description FROM service_categories
+SELECT id, name FROM service_categories
 WHERE id = $1
 `
 
 func (q *Queries) GetServiceCategoryByID(ctx context.Context, id int64) (ServiceCategory, error) {
 	row := q.db.QueryRowContext(ctx, getServiceCategoryByID, id)
 	var i ServiceCategory
-	err := row.Scan(&i.ID, &i.Name, &i.Description)
+	err := row.Scan(&i.ID, &i.Name)
 	return i, err
 }
 
 const listServiceCategories = `-- name: ListServiceCategories :many
-SELECT id, name, description FROM service_categories
+SELECT id, name FROM service_categories
 ORDER BY name DESC
 LIMIT $1 OFFSET $2
 `
@@ -69,7 +64,7 @@ func (q *Queries) ListServiceCategories(ctx context.Context, arg ListServiceCate
 	items := []ServiceCategory{}
 	for rows.Next() {
 		var i ServiceCategory
-		if err := rows.Scan(&i.ID, &i.Name, &i.Description); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -85,20 +80,19 @@ func (q *Queries) ListServiceCategories(ctx context.Context, arg ListServiceCate
 
 const updateServiceCategory = `-- name: UpdateServiceCategory :one
 UPDATE service_categories
-SET name = $2, description = $3
+SET name = $2
 WHERE id = $1
-RETURNING id, name, description
+RETURNING id, name
 `
 
 type UpdateServiceCategoryParams struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 func (q *Queries) UpdateServiceCategory(ctx context.Context, arg UpdateServiceCategoryParams) (ServiceCategory, error) {
-	row := q.db.QueryRowContext(ctx, updateServiceCategory, arg.ID, arg.Name, arg.Description)
+	row := q.db.QueryRowContext(ctx, updateServiceCategory, arg.ID, arg.Name)
 	var i ServiceCategory
-	err := row.Scan(&i.ID, &i.Name, &i.Description)
+	err := row.Scan(&i.ID, &i.Name)
 	return i, err
 }

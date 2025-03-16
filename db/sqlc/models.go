@@ -237,9 +237,8 @@ type Service struct {
 }
 
 type ServiceCategory struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Subscription struct {
