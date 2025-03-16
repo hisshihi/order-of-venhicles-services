@@ -67,6 +67,10 @@ func (server *Server) setupServer() {
 	// Маршруты доступные всем авторизированным пользователям
 	authRoutes.GET("/users/me", server.getCurrentUser)
 	authRoutes.GET("/services/:id", server.getServiceByID)
+	authRoutes.GET("/services/list", server.listService)
+	authRoutes.GET("/services/list/category", server.listServiceByCategoryID)
+	authRoutes.GET("/category/:id", server.getCategoryByID)
+	authRoutes.GET("/category", server.listCategory)
 
 	// Маршруты для клиентов
 	clientRoutes := router.Group("/client")
@@ -91,8 +95,6 @@ func (server *Server) setupServer() {
 	providerRoutes.POST("/services", server.createService)
 	providerRoutes.GET("/services", server.getServiceByProviderID)
 	providerRoutes.GET("/services/list/u", server.listServiceByProviderID)
-	providerRoutes.GET("/services/list/category", server.listServiceByCategoryID)
-	providerRoutes.GET("/services/list", server.listService)
 	providerRoutes.PUT("/services/:id", server.updateService)
 	providerRoutes.DELETE("/services/:id", server.deleteService)
 
@@ -112,8 +114,6 @@ func (server *Server) setupServer() {
 	adminRoutes.Use(server.roleCheckMiddleware(string(sqlc.RoleAdmin)))
 	adminRoutes.GET("/users/:id", server.getUserByID) // Доступ к данным пользователя по ID
 	adminRoutes.POST("/category", server.createCategory)
-	adminRoutes.GET("/category/:id", server.getCategoryByID)
-	adminRoutes.GET("/category", server.listCategory)
 	adminRoutes.PUT("/category/:id", server.updateCategory)
 	adminRoutes.DELETE("/category/:id", server.deleteCategory)
 	// Здесь можно добавить другие маршруты для администраторов
