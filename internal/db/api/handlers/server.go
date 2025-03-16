@@ -66,6 +66,7 @@ func (server *Server) setupServer() {
 
 	// Маршруты доступные всем авторизированным пользователям
 	authRoutes.GET("/users/me", server.getCurrentUser)
+	authRoutes.GET("/services/:id", server.getServiceByID)
 
 	// Маршруты для клиентов
 	clientRoutes := router.Group("/client")
@@ -88,6 +89,12 @@ func (server *Server) setupServer() {
 	))
 	// Добавьте здесь маршруты для поставщиков
 	providerRoutes.POST("/services", server.createService)
+	providerRoutes.GET("/services", server.getServiceByProviderID)
+	providerRoutes.GET("/services/list/u", server.listServiceByProviderID)
+	providerRoutes.GET("/services/list/category", server.listServiceByCategoryID)
+	providerRoutes.GET("/services/list", server.listService)
+	providerRoutes.PUT("/services/:id", server.updateService)
+	providerRoutes.DELETE("/services/:id", server.deleteService)
 
 	// Маршруты для партнеров
 	partnerRoutes := router.Group("/partner")
