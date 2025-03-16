@@ -29,7 +29,7 @@ CREATE TABLE "users" (
 );
 CREATE TABLE "service_categories" (
     "id" bigserial PRIMARY KEY NOT NULL,
-    "name" varchar NOT NULL
+    "name" varchar NOT NULL UNIQUE
 );
 CREATE TABLE "services" (
     "id" bigserial PRIMARY KEY NOT NULL,
