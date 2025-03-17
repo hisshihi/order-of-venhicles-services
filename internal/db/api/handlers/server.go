@@ -114,6 +114,7 @@ func (server *Server) setupServer() {
 	clientRoutes.POST("/reviews", server.createReview)
 	clientRoutes.GET("/reviews", server.listReviewByProviderID)
 	clientRoutes.GET("/reviews/:id/rating", server.getAverageRatingForProvider)
+	clientRoutes.DELETE("/reviews/:id", server.deleteReview)
 
 	clientRoutes.GET("/services/:id", server.getServiceByID)
 	clientRoutes.GET("/services/list", server.listService)

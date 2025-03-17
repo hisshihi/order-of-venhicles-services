@@ -163,3 +163,45 @@ func (server *Server) getAverageRatingForProvider(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
+// Удаление отзыва (только если его удаляет автор)
+type deleteReviewRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+func (server *Server) deleteReview(ctx *gin.Context) {
+	var req deleteReviewRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	review, err := server.store.GetReviewByID(ctx, req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		return
+	}
+
+	if review.ClientID == user.ID || user.Role.Role == sqlc.RoleAdmin {
+		arg := sqlc.DeleteReviewParams{
+			ID: req.ID,
+			ClientID: review.ClientID,
+		}
+		err = server.store.DeleteReview(ctx, arg)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusNoContent, nil)
+	} else {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("нельзя удалить чужой отзыв")))
+	}
+}
