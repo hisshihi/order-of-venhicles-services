@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -171,6 +172,8 @@ func (server *Server) setupServer() {
 }
 
 func (server *Server) Start(address string) error {
+	server.startSubscriptionChecker()
+
 	return server.router.Run(address)
 }
 
@@ -399,4 +402,23 @@ func (server *Server) getUserDataFromToken(ctx *gin.Context) (sqlc.User, error) 
 	}
 
 	return user, nil
+}
+
+func (server *Server) updateExpiredSubscriptions(ctx *gin.Context) error {
+	// Вызываем SQL-запрос для проверки истёкших подписок
+	expiredSubs, err := server.store.CheckAndUpdateExpiredSubscriptions(ctx)
+	if err != nil {
+		log.Printf("Ошибка при обновлении истёкших подписок %v", err)
+		return err
+	}
+
+	log.Printf("Обновлено %d истёкших подписок", len(expiredSubs))
+
+	for _, sub := range expiredSubs {
+		log.Printf("Подписка ID: %d для провайдера ID: %d истекла %s", sub.ID, sub.ProviderID, sub.EndDate.Format("2006-01-02"))
+
+		// TODO: добавить отправку уведомления
+	}
+
+	return nil
 }

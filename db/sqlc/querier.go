@@ -14,6 +14,7 @@ type Querier interface {
 	AcceptOrderByProviderID(ctx context.Context, arg AcceptOrderByProviderIDParams) (Order, error)
 	// Добавляет услугодателя в избранное клиента
 	AddProviderToFavorites(ctx context.Context, arg AddProviderToFavoritesParams) (Favorite, error)
+	CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Subscription, error)
 	// Проверяет, оставил ли клиент отзыв по данному заказу
 	CheckIfClientReviewedOrder(ctx context.Context, arg CheckIfClientReviewedOrderParams) (bool, error)
 	// Проверяет, добавлен ли услугодатель в избранное клиента
@@ -38,6 +39,7 @@ type Querier interface {
 	DeleteServiceCategory(ctx context.Context, id int64) error
 	DeleteSubscription(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
+	GetActiveSubscriptionForProvider(ctx context.Context, providerID int64) (Subscription, error)
 	// Получает среднюю оценку услугодателя
 	GetAverageRatingForProvider(ctx context.Context, providerID int64) (GetAverageRatingForProviderRow, error)
 	// Получает историю переписки между двумя пользователями

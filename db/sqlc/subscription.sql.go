@@ -10,6 +10,49 @@ import (
 	"time"
 )
 
+const checkAndUpdateExpiredSubscriptions = `-- name: CheckAndUpdateExpiredSubscriptions :many
+UPDATE subscriptions
+SET status = 'expired',
+    updated_at = NOW()
+WHERE status = 'active'
+    AND end_date <= NOW()
+RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+`
+
+func (q *Queries) CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Subscription, error) {
+	rows, err := q.db.QueryContext(ctx, checkAndUpdateExpiredSubscriptions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscription{}
+	for rows.Next() {
+		var i Subscription
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProviderID,
+			&i.StartDate,
+			&i.EndDate,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SubscriptionType,
+			&i.Price,
+			&i.PromoCodeID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createSubscription = `-- name: CreateSubscription :one
 INSERT INTO subscriptions (provider_id, start_date, end_date, status)
 VALUES ($1, $2, $3, $4)
@@ -56,8 +99,37 @@ func (q *Queries) DeleteSubscription(ctx context.Context, id int64) error {
 	return err
 }
 
+const getActiveSubscriptionForProvider = `-- name: GetActiveSubscriptionForProvider :one
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+FROM subscriptions
+WHERE provider_id = $1
+    AND status = 'active'
+    AND end_date > NOW()
+ORDER BY end_date DESC
+LIMIT 1
+`
+
+func (q *Queries) GetActiveSubscriptionForProvider(ctx context.Context, providerID int64) (Subscription, error) {
+	row := q.db.QueryRowContext(ctx, getActiveSubscriptionForProvider, providerID)
+	var i Subscription
+	err := row.Scan(
+		&i.ID,
+		&i.ProviderID,
+		&i.StartDate,
+		&i.EndDate,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.SubscriptionType,
+		&i.Price,
+		&i.PromoCodeID,
+	)
+	return i, err
+}
+
 const getSubscriptionByID = `-- name: GetSubscriptionByID :one
-SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id FROM subscriptions
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+FROM subscriptions
 WHERE id = $1
 `
 
@@ -80,7 +152,8 @@ func (q *Queries) GetSubscriptionByID(ctx context.Context, id int64) (Subscripti
 }
 
 const listSubscriptions = `-- name: ListSubscriptions :many
-SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id FROM subscriptions
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+FROM subscriptions
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -126,7 +199,11 @@ func (q *Queries) ListSubscriptions(ctx context.Context, arg ListSubscriptionsPa
 
 const updateSubscription = `-- name: UpdateSubscription :one
 UPDATE subscriptions
-SET provider_id = $2, start_date = $3, end_date = $4, status = $5, updated_at = NOW()
+SET provider_id = $2,
+    start_date = $3,
+    end_date = $4,
+    status = $5,
+    updated_at = NOW()
 WHERE id = $1
 RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
 `
