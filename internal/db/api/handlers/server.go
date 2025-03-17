@@ -94,9 +94,6 @@ func (server *Server) setupServer() {
 
 	// Маршруты доступные всем авторизированным пользователям
 	authRoutes.GET("/users/me", server.getCurrentUser)
-	authRoutes.GET("/services/:id", server.getServiceByID)
-	authRoutes.GET("/services/list", server.listService)
-	authRoutes.GET("/services/list/category", server.listServiceByCategoryID)
 	authRoutes.GET("/category/:id", server.getCategoryByID)
 	authRoutes.GET("/category", server.listCategory)
 
@@ -115,6 +112,11 @@ func (server *Server) setupServer() {
 	clientRoutes.GET("/orders/", server.listOrders)
 	clientRoutes.POST("/reviews", server.createReview)
 	clientRoutes.GET("/reviews", server.listReviewByProviderID)
+
+	clientRoutes.GET("/services/:id", server.getServiceByID)
+	clientRoutes.GET("/services/list", server.listService)
+	clientRoutes.GET("/services/list/provider", server.listServiceByProviderID)
+	clientRoutes.GET("/services/list/category", server.listServiceByCategoryID)
 
 	// Маршруты для поставщиков услуг
 	providerRoutes := router.Group("/provider")

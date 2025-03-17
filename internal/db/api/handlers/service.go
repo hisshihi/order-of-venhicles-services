@@ -16,6 +16,9 @@ type createServiceRequest struct {
 	Title       string `json:"title" binding:"required,min=5"`
 	Description string `json:"description" binding:"required,min=50"`
 	Price       string `json:"price" binding:"required"`
+	Country string `json:"country" binding:"required"`
+	City string `json:"city" binding:"required"`
+	District string `json:"district" binding:"required"`
 }
 
 type createServiceResponse struct {
@@ -25,6 +28,16 @@ type createServiceResponse struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Price       string `json:"price"`
+	Country string `json:"country" binding:"required"`
+	City string `json:"city" binding:"required"`
+	District string `json:"district"`
+	ProviderName string `json:"provider_name"`
+	ProviderPhoto string `json:"provider_photo"`
+	ProviderPhone string `json:"provider_phone"`
+	ProviderWhatsapp string `json:"provider_whatsapp"`
+	CategoryName string `json:"category_name"`
+	ReviewsCount int64 `json:"reviews_count"`
+	AverageRating float64 `json:"average_rating"`
 }
 
 func (server *Server) createService(ctx *gin.Context) {
@@ -46,6 +59,9 @@ func (server *Server) createService(ctx *gin.Context) {
 		Title:       req.Title,
 		Description: req.Description,
 		Price:       req.Price,
+		Country: sql.NullString{String: req.Country, Valid: true},
+		City: sql.NullString{String: req.City, Valid: true},
+		District: sql.NullString{String: req.District, Valid: true},
 	}
 
 	service, err := server.store.CreateService(ctx, arg)
@@ -68,6 +84,9 @@ func (server *Server) createService(ctx *gin.Context) {
 		Title:       service.Title,
 		Description: service.Description,
 		Price:       service.Price,
+		Country: service.Country.String,
+		City: service.City.String,
+		District: service.District.String,
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
@@ -124,19 +143,11 @@ func (server *Server) getServiceByID(ctx *gin.Context) {
 		return
 	}
 
-	rsp := createServiceResponse{
-		ID:          service.ID,
-		ProviderID:  service.ProviderID,
-		CategoryID:  service.CategoryID,
-		Title:       service.Title,
-		Description: service.Description,
-		Price:       service.Price,
-	}
-
-	ctx.JSON(http.StatusOK, rsp)
+	ctx.JSON(http.StatusOK, service)
 }
 
 type listServicesRequest struct {
+	ProviderID int64 `form:"provider_id" binding:"min=1,required"`
 	PageID   int32 `form:"page_id" binding:"min=1,required"`
 	PageSize int32 `form:"page_size" binding:"min=5,max=10,required"`
 }
@@ -148,14 +159,8 @@ func (server *Server) listServiceByProviderID(ctx *gin.Context) {
 		return
 	}
 
-	user, err := server.getUserDataFromToken(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
 	arg := sqlc.GetServicesByProviderIDParams{
-		ProviderID: user.ID,
+		ProviderID: req.ProviderID,
 		Limit:      int64(req.PageSize),
 		Offset:     int64((req.PageID - 1) * req.PageSize),
 	}
@@ -223,6 +228,9 @@ type updateServiceRequest struct {
 	Title       string `json:"title" binding:"required,min=5"`
 	Description string `json:"description" binding:"required,min=50"`
 	Price       string `json:"price" binding:"required"`
+	Country     string `json:"country" binding:"required"`
+	City        string `json:"city" binding:"required"`
+	District    string `json:"district" binding:"required"`
 }
 
 func (server *Server) updateService(ctx *gin.Context) {
@@ -282,6 +290,9 @@ func (server *Server) updateService(ctx *gin.Context) {
 		Title:       req.Title,
 		Description: req.Description,
 		Price:       req.Price,
+		Country: sql.NullString{String: req.Country, Valid: true},
+		City: sql.NullString{String: req.City, Valid: true},
+		District: sql.NullString{String: req.District, Valid: true},
 	}
 
 	updatedService, err := server.store.UpdateService(ctx, arg)
