@@ -7,13 +7,16 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/hisshihi/order-of-venhicles-services/db/sqlc"
 	"github.com/hisshihi/order-of-venhicles-services/internal/config"
 	"github.com/hisshihi/order-of-venhicles-services/internal/db"
 	"github.com/hisshihi/order-of-venhicles-services/pkg/util"
 	"github.com/lib/pq"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -21,6 +24,17 @@ const (
 	authorizationTypeBearer = "bearer"
 	authorizationPayloadKey = "authorization_payload"
 )
+
+var limiter = rate.NewLimiter(1, 300)
+
+func rateLimiter(c *gin.Context) {
+	if !limiter.Allow() {
+		c.JSON(http.StatusTooManyRequests, errorResponse(errors.New("too many requests")))
+		c.Abort()
+		return
+	}
+	c.Next()
+}
 
 type Server struct {
 	config config.Config
@@ -55,6 +69,20 @@ func (server *Server) setupServer() {
 		"172.16.0.0/12",  // Docker сети
 		"192.168.0.0/16", // локальные сети
 	})
+
+	// Настройка CORS
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{"http://localhost:8081"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+	router.Use(cors.New(corsConfig))
+
+	// Применяем middleware для ограничения запросов
+	router.Use(rateLimiter)
 
 	// Публичные маршруты (без авторизации)
 	router.POST("/create-user", server.createUser)
