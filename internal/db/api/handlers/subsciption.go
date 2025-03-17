@@ -103,7 +103,7 @@ func (server *Server) checkSubscriptionActive(ctx *gin.Context) {
 	subscription, err := server.store.GetActiveSubscriptionForProvider(ctx, user.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusOK, gin.H{
+			ctx.JSON(http.StatusUnauthorized, gin.H{
 				"has_active_subscription": false,
 				"message":                 "у вас нет активной подписки",
 			})
@@ -123,13 +123,14 @@ func (server *Server) checkSubscriptionActive(ctx *gin.Context) {
 		"end_date":                subscription.EndDate,
 		"remaining_days":          remainingDays,
 		"status":                  subscription.Status.StatusSubscription,
+		"updated_at":              subscription.UpdatedAt,
 	})
 }
 
 // Запуск переодической проверки истекших подписок
 func (server *Server) startSubscriptionChecker() {
 	go func() {
-		ticker := time.NewTicker(24 * time.Hour)
+		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
 
 		for range ticker.C {
@@ -142,4 +143,55 @@ func (server *Server) startSubscriptionChecker() {
 	}()
 
 	log.Println("Запущена проверка истекших подписок")
+}
+
+// Middleware для проверки активной подписки
+func (server *Server) subscriptionCheckMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		user, err := server.getUserDataFromToken(ctx)
+		if err != nil {
+			ctx.Abort()
+			return
+		}
+
+		// Проверка только для провайдеров
+		if user.Role.Role != sqlc.RoleProvider {
+			ctx.Next()
+			return
+		}
+
+		// Получаем активную подписку
+		subscription, err := server.store.GetActiveSubscriptionForProvider(ctx, user.ID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				ctx.JSON(http.StatusPaymentRequired, gin.H{
+					"error": "у вас нет активной подписки, оформите подписку для доступа к этому функционалу",
+				})
+				ctx.Abort()
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			ctx.Abort()
+			return
+		}
+
+		// Проверяем статус подписки
+		if subscription.Status.StatusSubscription != sqlc.StatusSubscriptionActive || time.Now().After(subscription.EndDate) {
+			ctx.JSON(http.StatusPaymentRequired, gin.H{
+				"error": "ваша подписка неактивна, обновите подписку для доступа к этому функционалу",
+			})
+			ctx.Abort()
+			return
+		}
+
+		// Добавляем информацию о подписке в контекст
+		remainingDays := int(time.Until(subscription.EndDate).Hours() / 24)
+		ctx.Set("subscription", gin.H{
+			"subscription_id": subscription.ID,
+			"end_date":        subscription.EndDate,
+			"remaining_days":  remainingDays,
+		})
+
+		ctx.Next()
+	}
 }

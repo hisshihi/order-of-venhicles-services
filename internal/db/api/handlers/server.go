@@ -129,17 +129,25 @@ func (server *Server) setupServer() {
 		string(sqlc.RoleProvider),
 		string(sqlc.RoleAdmin),
 	))
-	// Добавьте здесь маршруты для поставщиков
-	providerRoutes.POST("/services", server.createService)
-	providerRoutes.GET("/services", server.getServiceByProviderID)
-	providerRoutes.GET("/services/list/u", server.listServiceByProviderID)
-	providerRoutes.PUT("/services/:id", server.updateService)
-	providerRoutes.DELETE("/services/:id", server.deleteService)
-	providerRoutes.GET("/orders/available", server.listAvailableOrders)
-	providerRoutes.GET("/orders/statistics", server.getOrdersStatistics)
-	providerRoutes.POST("/orders/:id/accept", server.acceptOrder)
-	providerRoutes.GET("/orders/category/:category_id", server.getOrdersByCategory)
-	providerRoutes.GET("/reviews/only", server.getReviewsByThisProviderID)
+
+	// Маршруты, которые НЕ требуют подписки
+	providerRoutes.POST("/subscription", server.createSubscription)
+	providerRoutes.GET("/subscription/check", server.checkSubscriptionActive)
+
+	// Маршруты, которые требуют подписку
+	subscriptionRequiredRoutes := providerRoutes.Group("/")
+	subscriptionRequiredRoutes.Use(server.subscriptionCheckMiddleware())
+
+	subscriptionRequiredRoutes.POST("/services", server.createService)
+	subscriptionRequiredRoutes.GET("/services", server.getServiceByProviderID)
+	subscriptionRequiredRoutes.GET("/services/list/u", server.listServiceFromProvider)
+	subscriptionRequiredRoutes.PUT("/services/:id", server.updateService)
+	subscriptionRequiredRoutes.DELETE("/services/:id", server.deleteService)
+	subscriptionRequiredRoutes.POST("/orders/:id/accept", server.acceptOrder)
+	subscriptionRequiredRoutes.GET("/orders/available", server.listAvailableOrders)
+	subscriptionRequiredRoutes.GET("/orders/statistics", server.getOrdersStatistics)
+	subscriptionRequiredRoutes.GET("/orders/category/:category_id", server.getOrdersByCategory)
+	subscriptionRequiredRoutes.GET("/reviews/only", server.getReviewsByThisProviderID)
 
 	// Маршруты для партнеров
 	partnerRoutes := router.Group("/partner")
