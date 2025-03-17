@@ -192,7 +192,7 @@ func (server *Server) deleteReview(ctx *gin.Context) {
 
 	if review.ClientID == user.ID || user.Role.Role == sqlc.RoleAdmin {
 		arg := sqlc.DeleteReviewParams{
-			ID: req.ID,
+			ID:       req.ID,
 			ClientID: review.ClientID,
 		}
 		err = server.store.DeleteReview(ctx, arg)
@@ -203,5 +203,42 @@ func (server *Server) deleteReview(ctx *gin.Context) {
 		ctx.JSON(http.StatusNoContent, nil)
 	} else {
 		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("нельзя удалить чужой отзыв")))
+	}
+}
+
+// Просмотр отзывов на себя для услугодателя
+type getReviewsByOnlyProviderID struct {
+	PageSize int32 `form:"page_size" binding:"min=5,max=10,required"`
+	PageID   int32 `form:"page_id" binding:"min=1,required"`
+}
+
+func (server *Server) getReviewsByThisProviderID(ctx *gin.Context) {
+	var req getReviewsByOnlyProviderID
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		return
+	}
+
+	if user.Role.Role == sqlc.RoleProvider {
+		arg := sqlc.GetReviewsByProviderIDParams{
+			ProviderID: user.ID,
+			Limit:      int64(req.PageSize),
+			Offset:     int64((req.PageID - 1) * req.PageSize),
+		}
+
+		reviews, err := server.store.GetReviewsByProviderID(ctx, arg)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusOK, reviews)
+	} else {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("только услугодатель может смотреть свои отзывы")))
 	}
 }

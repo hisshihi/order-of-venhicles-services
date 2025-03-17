@@ -138,6 +138,7 @@ func (server *Server) setupServer() {
 	providerRoutes.GET("/orders/statistics", server.getOrdersStatistics)
 	providerRoutes.POST("/orders/:id/accept", server.acceptOrder)
 	providerRoutes.GET("/orders/category/:category_id", server.getOrdersByCategory)
+	providerRoutes.GET("/reviews/only", server.getReviewsByThisProviderID)
 
 	// Маршруты для партнеров
 	partnerRoutes := router.Group("/partner")
