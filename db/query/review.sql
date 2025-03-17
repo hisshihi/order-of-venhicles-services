@@ -9,6 +9,7 @@ INSERT INTO "reviews" (
     )
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
+
 -- name: GetReviewsByProviderID :many
 -- Получает все отзывы об услугодателе
 SELECT r.id,
@@ -23,6 +24,7 @@ FROM "reviews" r
 WHERE r.provider_id = $1
 ORDER BY r.created_at DESC
 LIMIT $2 OFFSET $3;
+
 -- name: GetReviewByID :one
 -- Получает конкретный отзыв по ID
 SELECT r.id,
@@ -38,17 +40,20 @@ FROM "reviews" r
     JOIN "users" uc ON r.client_id = uc.id
     JOIN "users" up ON r.provider_id = up.id
 WHERE r.id = $1;
+
 -- name: GetAverageRatingForProvider :one
 -- Получает среднюю оценку услугодателя
 SELECT COALESCE(AVG(rating), 0) as average_rating,
     COUNT(*) as total_reviews
 FROM "reviews"
 WHERE provider_id = $1;
+
 -- name: DeleteReview :exec
 -- Удаляет отзыв (только если пользователь является автором или администратором)
 DELETE FROM "reviews"
 WHERE id = $1
     AND client_id = $2;
+
 -- name: CheckIfClientReviewedOrder :one
 -- Проверяет, оставил ли клиент отзыв по данному заказу
 SELECT EXISTS(

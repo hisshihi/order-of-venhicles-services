@@ -3,7 +3,9 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hisshihi/order-of-venhicles-services/db/sqlc"
@@ -125,3 +127,39 @@ func (server *Server) listReviewByProviderID(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, reviews)
 }
+
+// API получения средней оценки об услугодателе
+type getAverageRatingForProviderRequest struct {
+	ID int64 `uri:"id" binding:"min=1,required"`
+}
+
+func (server *Server) getAverageRatingForProvider(ctx *gin.Context) {
+	var req getAverageRatingForProviderRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	result, err := server.store.GetAverageRatingForProvider(ctx, req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	value, err := strconv.ParseFloat(result.AverageRating.String, 64)
+	if err != nil {
+		fmt.Println("Ошибка преобразования", err)
+		return
+	}
+
+	averageRating := fmt.Sprintf("%.1f", value)
+
+	result.AverageRating.String = averageRating
+
+	ctx.JSON(http.StatusOK, result)
+}
+
