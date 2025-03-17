@@ -98,8 +98,6 @@ func (server *Server) getServiceByProviderID(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 	}
 
-	
-
 	service, err := server.store.GetServiceByID(ctx, user.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
