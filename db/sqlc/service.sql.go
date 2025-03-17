@@ -8,29 +8,48 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createService = `-- name: CreateService :one
-INSERT INTO services (provider_id, category_id, title, description, price)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, provider_id, category_id, title, description, price, created_at, updated_at
+INSERT INTO "services" (
+        provider_id,
+        category_id,
+        subcategory,
+        title,
+        description,
+        price,
+        country,
+        city,
+        district
+    )
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, provider_id, category_id, title, description, price, created_at, updated_at, subcategory, country, city, district
 `
 
 type CreateServiceParams struct {
-	ProviderID  int64  `json:"provider_id"`
-	CategoryID  int64  `json:"category_id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Price       string `json:"price"`
+	ProviderID  int64          `json:"provider_id"`
+	CategoryID  int64          `json:"category_id"`
+	Subcategory sql.NullString `json:"subcategory"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	Price       string         `json:"price"`
+	Country     sql.NullString `json:"country"`
+	City        sql.NullString `json:"city"`
+	District    sql.NullString `json:"district"`
 }
 
 func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (Service, error) {
 	row := q.db.QueryRowContext(ctx, createService,
 		arg.ProviderID,
 		arg.CategoryID,
+		arg.Subcategory,
 		arg.Title,
 		arg.Description,
 		arg.Price,
+		arg.Country,
+		arg.City,
+		arg.District,
 	)
 	var i Service
 	err := row.Scan(
@@ -42,28 +61,78 @@ func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (S
 		&i.Price,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Subcategory,
+		&i.Country,
+		&i.City,
+		&i.District,
 	)
 	return i, err
 }
 
 const deleteService = `-- name: DeleteService :exec
-DELETE FROM services
+DELETE FROM "services"
 WHERE id = $1
+    AND provider_id = $2
 `
 
-func (q *Queries) DeleteService(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteService, id)
+type DeleteServiceParams struct {
+	ID         int64 `json:"id"`
+	ProviderID int64 `json:"provider_id"`
+}
+
+func (q *Queries) DeleteService(ctx context.Context, arg DeleteServiceParams) error {
+	_, err := q.db.ExecContext(ctx, deleteService, arg.ID, arg.ProviderID)
 	return err
 }
 
 const getServiceByID = `-- name: GetServiceByID :one
-SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
-WHERE id = $1
+SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
+    u.username as provider_name,
+    u.photo_url as provider_photo,
+    u.phone as provider_phone,
+    u.whatsapp as provider_whatsapp,
+    sc.name as category_name,
+    (
+        SELECT COUNT(*)
+        FROM "reviews" r
+        WHERE r.provider_id = s.provider_id
+    ) as reviews_count,
+    (
+        SELECT COALESCE(AVG(r.rating), 0)
+        FROM "reviews" r
+        WHERE r.provider_id = s.provider_id
+    ) as average_rating
+FROM "services" s
+    JOIN "users" u ON s.provider_id = u.id
+    JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE s.id = $1
 `
 
-func (q *Queries) GetServiceByID(ctx context.Context, id int64) (Service, error) {
+type GetServiceByIDRow struct {
+	ID               int64          `json:"id"`
+	ProviderID       int64          `json:"provider_id"`
+	CategoryID       int64          `json:"category_id"`
+	Title            string         `json:"title"`
+	Description      string         `json:"description"`
+	Price            string         `json:"price"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+	Subcategory      sql.NullString `json:"subcategory"`
+	Country          sql.NullString `json:"country"`
+	City             sql.NullString `json:"city"`
+	District         sql.NullString `json:"district"`
+	ProviderName     string         `json:"provider_name"`
+	ProviderPhoto    sql.NullString `json:"provider_photo"`
+	ProviderPhone    string         `json:"provider_phone"`
+	ProviderWhatsapp string         `json:"provider_whatsapp"`
+	CategoryName     string         `json:"category_name"`
+	ReviewsCount     int64          `json:"reviews_count"`
+	AverageRating    sql.NullString `json:"average_rating"`
+}
+
+func (q *Queries) GetServiceByID(ctx context.Context, id int64) (GetServiceByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getServiceByID, id)
-	var i Service
+	var i GetServiceByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.ProviderID,
@@ -73,51 +142,62 @@ func (q *Queries) GetServiceByID(ctx context.Context, id int64) (Service, error)
 		&i.Price,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Subcategory,
+		&i.Country,
+		&i.City,
+		&i.District,
+		&i.ProviderName,
+		&i.ProviderPhoto,
+		&i.ProviderPhone,
+		&i.ProviderWhatsapp,
+		&i.CategoryName,
+		&i.ReviewsCount,
+		&i.AverageRating,
 	)
 	return i, err
 }
 
-const getServiceByProviderID = `-- name: GetServiceByProviderID :one
-SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
-WHERE provider_id = $1
+const getServicesByProviderID = `-- name: GetServicesByProviderID :many
+SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
+    sc.name as category_name
+FROM "services" s
+    JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE s.provider_id = $1
+ORDER BY s.created_at DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) GetServiceByProviderID(ctx context.Context, providerID int64) (Service, error) {
-	row := q.db.QueryRowContext(ctx, getServiceByProviderID, providerID)
-	var i Service
-	err := row.Scan(
-		&i.ID,
-		&i.ProviderID,
-		&i.CategoryID,
-		&i.Title,
-		&i.Description,
-		&i.Price,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+type GetServicesByProviderIDParams struct {
+	ProviderID int64 `json:"provider_id"`
+	Limit      int64 `json:"limit"`
+	Offset     int64 `json:"offset"`
 }
 
-const listServices = `-- name: ListServices :many
-SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
-ORDER BY title DESC
-LIMIT $1 OFFSET $2
-`
-
-type ListServicesParams struct {
-	Limit  int64 `json:"limit"`
-	Offset int64 `json:"offset"`
+type GetServicesByProviderIDRow struct {
+	ID           int64          `json:"id"`
+	ProviderID   int64          `json:"provider_id"`
+	CategoryID   int64          `json:"category_id"`
+	Title        string         `json:"title"`
+	Description  string         `json:"description"`
+	Price        string         `json:"price"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	Subcategory  sql.NullString `json:"subcategory"`
+	Country      sql.NullString `json:"country"`
+	City         sql.NullString `json:"city"`
+	District     sql.NullString `json:"district"`
+	CategoryName string         `json:"category_name"`
 }
 
-func (q *Queries) ListServices(ctx context.Context, arg ListServicesParams) ([]Service, error) {
-	rows, err := q.db.QueryContext(ctx, listServices, arg.Limit, arg.Offset)
+func (q *Queries) GetServicesByProviderID(ctx context.Context, arg GetServicesByProviderIDParams) ([]GetServicesByProviderIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getServicesByProviderID, arg.ProviderID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Service{}
+	items := []GetServicesByProviderIDRow{}
 	for rows.Next() {
-		var i Service
+		var i GetServicesByProviderIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProviderID,
@@ -127,6 +207,85 @@ func (q *Queries) ListServices(ctx context.Context, arg ListServicesParams) ([]S
 			&i.Price,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Subcategory,
+			&i.Country,
+			&i.City,
+			&i.District,
+			&i.CategoryName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServices = `-- name: ListServices :many
+SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
+    u.username as provider_name,
+    u.photo_url as provider_photo,
+    sc.name as category_name
+FROM "services" s
+    JOIN "users" u ON s.provider_id = u.id
+    JOIN "service_categories" sc ON s.category_id = sc.id
+ORDER BY s.created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListServicesParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+type ListServicesRow struct {
+	ID            int64          `json:"id"`
+	ProviderID    int64          `json:"provider_id"`
+	CategoryID    int64          `json:"category_id"`
+	Title         string         `json:"title"`
+	Description   string         `json:"description"`
+	Price         string         `json:"price"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	Subcategory   sql.NullString `json:"subcategory"`
+	Country       sql.NullString `json:"country"`
+	City          sql.NullString `json:"city"`
+	District      sql.NullString `json:"district"`
+	ProviderName  string         `json:"provider_name"`
+	ProviderPhoto sql.NullString `json:"provider_photo"`
+	CategoryName  string         `json:"category_name"`
+}
+
+func (q *Queries) ListServices(ctx context.Context, arg ListServicesParams) ([]ListServicesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listServices, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServicesRow{}
+	for rows.Next() {
+		var i ListServicesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProviderID,
+			&i.CategoryID,
+			&i.Title,
+			&i.Description,
+			&i.Price,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Subcategory,
+			&i.Country,
+			&i.City,
+			&i.District,
+			&i.ProviderName,
+			&i.ProviderPhoto,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
@@ -142,9 +301,15 @@ func (q *Queries) ListServices(ctx context.Context, arg ListServicesParams) ([]S
 }
 
 const listServicesByCategory = `-- name: ListServicesByCategory :many
-SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
-WHERE category_id = $1
-ORDER BY title
+SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
+    u.username as provider_name,
+    u.photo_url as provider_photo,
+    sc.name as category_name
+FROM "services" s
+    JOIN "users" u ON s.provider_id = u.id
+    JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE s.category_id = $1
+ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -154,15 +319,33 @@ type ListServicesByCategoryParams struct {
 	Offset     int64 `json:"offset"`
 }
 
-func (q *Queries) ListServicesByCategory(ctx context.Context, arg ListServicesByCategoryParams) ([]Service, error) {
+type ListServicesByCategoryRow struct {
+	ID            int64          `json:"id"`
+	ProviderID    int64          `json:"provider_id"`
+	CategoryID    int64          `json:"category_id"`
+	Title         string         `json:"title"`
+	Description   string         `json:"description"`
+	Price         string         `json:"price"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	Subcategory   sql.NullString `json:"subcategory"`
+	Country       sql.NullString `json:"country"`
+	City          sql.NullString `json:"city"`
+	District      sql.NullString `json:"district"`
+	ProviderName  string         `json:"provider_name"`
+	ProviderPhoto sql.NullString `json:"provider_photo"`
+	CategoryName  string         `json:"category_name"`
+}
+
+func (q *Queries) ListServicesByCategory(ctx context.Context, arg ListServicesByCategoryParams) ([]ListServicesByCategoryRow, error) {
 	rows, err := q.db.QueryContext(ctx, listServicesByCategory, arg.CategoryID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Service{}
+	items := []ListServicesByCategoryRow{}
 	for rows.Next() {
-		var i Service
+		var i ListServicesByCategoryRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProviderID,
@@ -172,6 +355,13 @@ func (q *Queries) ListServicesByCategory(ctx context.Context, arg ListServicesBy
 			&i.Price,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Subcategory,
+			&i.Country,
+			&i.City,
+			&i.District,
+			&i.ProviderName,
+			&i.ProviderPhoto,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
@@ -186,28 +376,71 @@ func (q *Queries) ListServicesByCategory(ctx context.Context, arg ListServicesBy
 	return items, nil
 }
 
-const listServicesByProviderID = `-- name: ListServicesByProviderID :many
-SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
-WHERE provider_id = $1
-ORDER BY title
-LIMIT $2 OFFSET $3
+const listServicesByLocation = `-- name: ListServicesByLocation :many
+SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
+    u.username as provider_name,
+    u.photo_url as provider_photo,
+    sc.name as category_name
+FROM "services" s
+    JOIN "users" u ON s.provider_id = u.id
+    JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE (
+        $1::text IS NULL
+        OR s.country = $1
+    )
+    AND (
+        $2::text IS NULL
+        OR s.city = $2
+    )
+    AND (
+        $3::text IS NULL
+        OR s.district = $3
+    )
+ORDER BY s.created_at DESC
+LIMIT $4 OFFSET $5
 `
 
-type ListServicesByProviderIDParams struct {
-	ProviderID int64 `json:"provider_id"`
-	Limit      int64 `json:"limit"`
-	Offset     int64 `json:"offset"`
+type ListServicesByLocationParams struct {
+	Column1 string `json:"column_1"`
+	Column2 string `json:"column_2"`
+	Column3 string `json:"column_3"`
+	Limit   int64  `json:"limit"`
+	Offset  int64  `json:"offset"`
 }
 
-func (q *Queries) ListServicesByProviderID(ctx context.Context, arg ListServicesByProviderIDParams) ([]Service, error) {
-	rows, err := q.db.QueryContext(ctx, listServicesByProviderID, arg.ProviderID, arg.Limit, arg.Offset)
+type ListServicesByLocationRow struct {
+	ID            int64          `json:"id"`
+	ProviderID    int64          `json:"provider_id"`
+	CategoryID    int64          `json:"category_id"`
+	Title         string         `json:"title"`
+	Description   string         `json:"description"`
+	Price         string         `json:"price"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	Subcategory   sql.NullString `json:"subcategory"`
+	Country       sql.NullString `json:"country"`
+	City          sql.NullString `json:"city"`
+	District      sql.NullString `json:"district"`
+	ProviderName  string         `json:"provider_name"`
+	ProviderPhoto sql.NullString `json:"provider_photo"`
+	CategoryName  string         `json:"category_name"`
+}
+
+func (q *Queries) ListServicesByLocation(ctx context.Context, arg ListServicesByLocationParams) ([]ListServicesByLocationRow, error) {
+	rows, err := q.db.QueryContext(ctx, listServicesByLocation,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Service{}
+	items := []ListServicesByLocationRow{}
 	for rows.Next() {
-		var i Service
+		var i ListServicesByLocationRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProviderID,
@@ -217,6 +450,13 @@ func (q *Queries) ListServicesByProviderID(ctx context.Context, arg ListServices
 			&i.Price,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Subcategory,
+			&i.Country,
+			&i.City,
+			&i.District,
+			&i.ProviderName,
+			&i.ProviderPhoto,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
@@ -231,28 +471,57 @@ func (q *Queries) ListServicesByProviderID(ctx context.Context, arg ListServices
 	return items, nil
 }
 
-const listServicesByTitle = `-- name: ListServicesByTitle :many
-SELECT id, provider_id, category_id, title, description, price, created_at, updated_at FROM services
-WHERE title ILIKE '%' || $1 || '%'
-ORDER BY title
+const searchServices = `-- name: SearchServices :many
+SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
+    u.username as provider_name,
+    u.photo_url as provider_photo,
+    sc.name as category_name
+FROM "services" s
+    JOIN "users" u ON s.provider_id = u.id
+    JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE (
+        to_tsvector('simple', s.title) @@ to_tsquery('simple', $1)
+        OR to_tsvector('simple', s.description) @@ to_tsquery('simple', $1)
+        OR s.title ILIKE '%' || $1 || '%'
+        OR s.description ILIKE '%' || $1 || '%'
+    )
+ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
-type ListServicesByTitleParams struct {
-	Column1 sql.NullString `json:"column_1"`
-	Limit   int64          `json:"limit"`
-	Offset  int64          `json:"offset"`
+type SearchServicesParams struct {
+	ToTsquery string `json:"to_tsquery"`
+	Limit     int64  `json:"limit"`
+	Offset    int64  `json:"offset"`
 }
 
-func (q *Queries) ListServicesByTitle(ctx context.Context, arg ListServicesByTitleParams) ([]Service, error) {
-	rows, err := q.db.QueryContext(ctx, listServicesByTitle, arg.Column1, arg.Limit, arg.Offset)
+type SearchServicesRow struct {
+	ID            int64          `json:"id"`
+	ProviderID    int64          `json:"provider_id"`
+	CategoryID    int64          `json:"category_id"`
+	Title         string         `json:"title"`
+	Description   string         `json:"description"`
+	Price         string         `json:"price"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	Subcategory   sql.NullString `json:"subcategory"`
+	Country       sql.NullString `json:"country"`
+	City          sql.NullString `json:"city"`
+	District      sql.NullString `json:"district"`
+	ProviderName  string         `json:"provider_name"`
+	ProviderPhoto sql.NullString `json:"provider_photo"`
+	CategoryName  string         `json:"category_name"`
+}
+
+func (q *Queries) SearchServices(ctx context.Context, arg SearchServicesParams) ([]SearchServicesRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchServices, arg.ToTsquery, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Service{}
+	items := []SearchServicesRow{}
 	for rows.Next() {
-		var i Service
+		var i SearchServicesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ProviderID,
@@ -262,6 +531,13 @@ func (q *Queries) ListServicesByTitle(ctx context.Context, arg ListServicesByTit
 			&i.Price,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Subcategory,
+			&i.Country,
+			&i.City,
+			&i.District,
+			&i.ProviderName,
+			&i.ProviderPhoto,
+			&i.CategoryName,
 		); err != nil {
 			return nil, err
 		}
@@ -277,19 +553,32 @@ func (q *Queries) ListServicesByTitle(ctx context.Context, arg ListServicesByTit
 }
 
 const updateService = `-- name: UpdateService :one
-UPDATE services
-SET provider_id = $2, category_id = $3, title = $4, description = $5, price = $6, updated_at = NOW()
+UPDATE "services"
+SET category_id = $3,
+    subcategory = $4,
+    title = $5,
+    description = $6,
+    price = $7,
+    country = $8,
+    city = $9,
+    district = $10,
+    updated_at = NOW()
 WHERE id = $1
-RETURNING id, provider_id, category_id, title, description, price, created_at, updated_at
+    AND provider_id = $2
+RETURNING id, provider_id, category_id, title, description, price, created_at, updated_at, subcategory, country, city, district
 `
 
 type UpdateServiceParams struct {
-	ID          int64  `json:"id"`
-	ProviderID  int64  `json:"provider_id"`
-	CategoryID  int64  `json:"category_id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Price       string `json:"price"`
+	ID          int64          `json:"id"`
+	ProviderID  int64          `json:"provider_id"`
+	CategoryID  int64          `json:"category_id"`
+	Subcategory sql.NullString `json:"subcategory"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	Price       string         `json:"price"`
+	Country     sql.NullString `json:"country"`
+	City        sql.NullString `json:"city"`
+	District    sql.NullString `json:"district"`
 }
 
 func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error) {
@@ -297,9 +586,13 @@ func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (S
 		arg.ID,
 		arg.ProviderID,
 		arg.CategoryID,
+		arg.Subcategory,
 		arg.Title,
 		arg.Description,
 		arg.Price,
+		arg.Country,
+		arg.City,
+		arg.District,
 	)
 	var i Service
 	err := row.Scan(
@@ -311,6 +604,10 @@ func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (S
 		&i.Price,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Subcategory,
+		&i.Country,
+		&i.City,
+		&i.District,
 	)
 	return i, err
 }

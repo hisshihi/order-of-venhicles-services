@@ -33,7 +33,7 @@ VALUES (
         $8,
         $9
     )
-RETURNING id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at
+RETURNING id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
 `
 
 type CreateUserParams struct {
@@ -75,6 +75,10 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Whatsapp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PhotoUrl,
+		&i.Description,
+		&i.IsVerified,
+		&i.IsBlocked,
 	)
 	return i, err
 }
@@ -90,7 +94,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
 WHERE email = $1
 LIMIT 1
 `
@@ -112,12 +116,16 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Whatsapp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PhotoUrl,
+		&i.Description,
+		&i.IsVerified,
+		&i.IsBlocked,
 	)
 	return i, err
 }
 
 const getUserByIDFromAdmin = `-- name: GetUserByIDFromAdmin :one
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
 WHERE id = $1
 `
 
@@ -138,12 +146,16 @@ func (q *Queries) GetUserByIDFromAdmin(ctx context.Context, id int64) (User, err
 		&i.Whatsapp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PhotoUrl,
+		&i.Description,
+		&i.IsVerified,
+		&i.IsBlocked,
 	)
 	return i, err
 }
 
 const getUserByIDFromUser = `-- name: GetUserByIDFromUser :one
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
 WHERE id = $1
 LIMIT 1
 `
@@ -165,12 +177,16 @@ func (q *Queries) GetUserByIDFromUser(ctx context.Context, id int64) (User, erro
 		&i.Whatsapp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PhotoUrl,
+		&i.Description,
+		&i.IsVerified,
+		&i.IsBlocked,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -203,6 +219,10 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.Whatsapp,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PhotoUrl,
+			&i.Description,
+			&i.IsVerified,
+			&i.IsBlocked,
 		); err != nil {
 			return nil, err
 		}
@@ -218,7 +238,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 }
 
 const listUsersByEmail = `-- name: ListUsersByEmail :many
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
 WHERE email ILIKE '%' || $1 || '%'
 ORDER BY email
 `
@@ -246,6 +266,10 @@ func (q *Queries) ListUsersByEmail(ctx context.Context, dollar_1 sql.NullString)
 			&i.Whatsapp,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PhotoUrl,
+			&i.Description,
+			&i.IsVerified,
+			&i.IsBlocked,
 		); err != nil {
 			return nil, err
 		}
@@ -261,7 +285,7 @@ func (q *Queries) ListUsersByEmail(ctx context.Context, dollar_1 sql.NullString)
 }
 
 const listUsersByRole = `-- name: ListUsersByRole :many
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
 WHERE role = $1
 ORDER BY username
 `
@@ -289,6 +313,10 @@ func (q *Queries) ListUsersByRole(ctx context.Context, role NullRole) ([]User, e
 			&i.Whatsapp,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PhotoUrl,
+			&i.Description,
+			&i.IsVerified,
+			&i.IsBlocked,
 		); err != nil {
 			return nil, err
 		}
@@ -304,7 +332,7 @@ func (q *Queries) ListUsersByRole(ctx context.Context, role NullRole) ([]User, e
 }
 
 const listUsersByUsername = `-- name: ListUsersByUsername :many
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
 WHERE username ILIKE '%' || $1 || '%'
 ORDER BY username
 `
@@ -332,6 +360,10 @@ func (q *Queries) ListUsersByUsername(ctx context.Context, dollar_1 sql.NullStri
 			&i.Whatsapp,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PhotoUrl,
+			&i.Description,
+			&i.IsVerified,
+			&i.IsBlocked,
 		); err != nil {
 			return nil, err
 		}
@@ -357,7 +389,7 @@ SET username = $2,
     whatsapp = $8,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at
+RETURNING id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
 `
 
 type UpdateUserParams struct {
@@ -397,6 +429,10 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Whatsapp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PhotoUrl,
+		&i.Description,
+		&i.IsVerified,
+		&i.IsBlocked,
 	)
 	return i, err
 }

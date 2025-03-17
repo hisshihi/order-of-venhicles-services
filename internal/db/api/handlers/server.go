@@ -85,6 +85,8 @@ func (server *Server) setupServer() {
 	clientRoutes.POST("/orders", server.createOrder)
 	clientRoutes.GET("/orders/:id", server.getOrderByID)
 	clientRoutes.GET("/orders/", server.listOrders)
+	clientRoutes.POST("/reviews", server.createReview)
+	clientRoutes.GET("/reviews", server.listReviewByProviderID)
 
 	// Маршруты для поставщиков услуг
 	providerRoutes := router.Group("/provider")
@@ -123,10 +125,10 @@ func (server *Server) setupServer() {
 
 	server.router = router
 
-	// Создаем администратора по умолчанию при инициализации сервера
-	if err := server.createAdminDefault(); err != nil {
+	// Создаем пользователей по умолчанию при инициализации приложения
+	if err := server.createDefaultUsers(); err != nil {
 		// Логируем ошибку, но не прерываем инициализацию сервера
-		fmt.Printf("Не удалось создать администратора по умолчанию: %v\n", err)
+		fmt.Printf("Не удалось создать пользователей по умолчанию: %v\n", err)
 	}
 }
 
@@ -240,45 +242,95 @@ type createAdminDefaultParam struct {
 	Role         *string `json:"role"`
 }
 
-// Создание администратора по умолчанию
-func (server *Server) createAdminDefault() error {
-	hashedPassword, err := util.HashPassword(server.config.AdminPassword)
+// Создание пользователей по умолчанию при инициализации приложения
+func (server *Server) createDefaultUsers() error {
+	// 1. Создание администратора
+	if err := server.createUserWithRole(
+		server.config.AdminUsername,
+		server.config.AdminEmail,
+		server.config.AdminPassword,
+		"+7-(999)-999-99-99",
+		"+7-(999)-999-99-99",
+		sqlc.RoleAdmin,
+	); err != nil {
+		return fmt.Errorf("ошибка при создании администратора: %w", err)
+	}
+
+	// 2. Создание клиента
+	if err := server.createUserWithRole(
+		server.config.ClientUsername,
+		server.config.ClientEmail,
+		server.config.ClientPassword,
+		"+7-(888)-888-88-88",
+		"+7-(888)-888-88-88",
+		sqlc.RoleClient,
+	); err != nil {
+		return fmt.Errorf("ошибка при создании клиента: %w", err)
+	}
+
+	// 3. Создание провайдера услуг
+	if err := server.createUserWithRole(
+		server.config.ProviderUsername,
+		server.config.ProviderEmail,
+		server.config.ProviderPassword,
+		"+7-(777)-777-77-77",
+		"+7-(777)-777-77-77",
+		sqlc.RoleProvider,
+	); err != nil {
+		return fmt.Errorf("ошибка при создании провайдера: %w", err)
+	}
+
+	// 4. Создание партнера
+	if err := server.createUserWithRole(
+		server.config.PartnerUsername,
+		server.config.PartnerEmail,
+		server.config.PartnerPassword,
+		"+7-(666)-666-66-66",
+		"+7-(666)-666-66-66",
+		sqlc.RolePartner,
+	); err != nil {
+		return fmt.Errorf("ошибка при создании партнера: %w", err)
+	}
+
+	return nil
+}
+
+// Вспомогательная функция для создания пользователя с определенной ролью
+func (server *Server) createUserWithRole(username, email, password, phone, whatsapp string, role sqlc.Role) error {
+	hashedPassword, err := util.HashPassword(password)
 	if err != nil {
 		return fmt.Errorf("ошибка при хэшировании пароля: %w", err)
 	}
 
 	arg := sqlc.CreateUserParams{
-		Username:     server.config.AdminUsername,
-		Email:        server.config.AdminEmail,
+		Username:     username,
+		Email:        email,
 		PasswordHash: hashedPassword,
 		Country:      sql.NullString{},
 		City:         sql.NullString{},
 		District:     sql.NullString{},
-		Phone:        "+7-(999)-999-99-99",
-		Whatsapp:     "+7-(999)-999-99-99",
-		Role:         sqlc.NullRole{Role: sqlc.RoleAdmin, Valid: true},
+		Phone:        phone,
+		Whatsapp:     whatsapp,
+		Role:         sqlc.NullRole{Role: role, Valid: true},
 	}
 
-	// Создаем администратора в базе данных
+	// Создаем пользователя в базе данных
 	_, err = server.store.CreateUser(context.Background(), arg)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code.Name() {
 			case "unique_violation":
-				// Администратор уже существует - это не ошибка при инициализации
-				fmt.Println("Администратор уже существует в системе")
+				// Пользователь уже существует - это не ошибка при инициализации
+				fmt.Printf("Пользователь %s (%s) уже существует в системе\n", username, role)
 				return nil
 			}
 		}
-		return fmt.Errorf("ошибка при создании администратора: %w", err)
+		return err
 	}
 
-	fmt.Println("--------------------------")
-	fmt.Println("Администратор успешно создан")
-	fmt.Println("--------------------------")
+	fmt.Printf("Пользователь %s с ролью %s успешно создан\n", username, role)
 	return nil
 }
-
 
 func (server *Server) getUserDataFromToken(ctx *gin.Context) (sqlc.User, error) {
 	// Получаем payload из токена авторизации

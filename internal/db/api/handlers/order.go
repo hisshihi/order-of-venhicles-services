@@ -114,13 +114,13 @@ func (server *Server) listOrders(ctx *gin.Context) {
 		return
 	}
 
-	arg := sqlc.ListOrdersParams{
+	arg := sqlc.ListOrdersByClientIDParams{
 		ClientID: user.ID,
 		Limit: int64(req.PageID),
 		Offset: int64((req.PageID - 1) * req.PageSize),
 	}
 
-	orders, err := server.store.ListOrders(ctx, arg)
+	orders, err := server.store.ListOrdersByClientID(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return

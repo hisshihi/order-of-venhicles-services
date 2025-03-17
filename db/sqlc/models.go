@@ -185,13 +185,42 @@ func (ns NullStatusSubscription) Value() (driver.Value, error) {
 	return string(ns.StatusSubscription), nil
 }
 
+type Favorite struct {
+	ID         int64     `json:"id"`
+	ClientID   int64     `json:"client_id"`
+	ProviderID int64     `json:"provider_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+type Message struct {
+	ID         int64        `json:"id"`
+	SenderID   int64        `json:"sender_id"`
+	ReceiverID int64        `json:"receiver_id"`
+	Content    string       `json:"content"`
+	IsRead     sql.NullBool `json:"is_read"`
+	CreatedAt  time.Time    `json:"created_at"`
+}
+
 type Order struct {
-	ID        int64            `json:"id"`
-	ClientID  int64            `json:"client_id"`
-	ServiceID int64            `json:"service_id"`
-	Status    NullStatusOrders `json:"status"`
-	CreatedAt time.Time        `json:"created_at"`
-	UpdatedAt time.Time        `json:"updated_at"`
+	ID               int64            `json:"id"`
+	ClientID         int64            `json:"client_id"`
+	ServiceID        int64            `json:"service_id"`
+	Status           NullStatusOrders `json:"status"`
+	CreatedAt        time.Time        `json:"created_at"`
+	UpdatedAt        time.Time        `json:"updated_at"`
+	ProviderAccepted sql.NullBool     `json:"provider_accepted"`
+	ProviderMessage  sql.NullString   `json:"provider_message"`
+	ClientMessage    sql.NullString   `json:"client_message"`
+	OrderDate        sql.NullTime     `json:"order_date"`
+}
+
+type PartnerStatistic struct {
+	ID                  int64         `json:"id"`
+	PartnerID           int64         `json:"partner_id"`
+	ProvidersAttracted  sql.NullInt32 `json:"providers_attracted"`
+	TotalSubscriptions  sql.NullInt32 `json:"total_subscriptions"`
+	ActiveSubscriptions sql.NullInt32 `json:"active_subscriptions"`
+	UpdatedAt           time.Time     `json:"updated_at"`
 }
 
 type Payment struct {
@@ -205,13 +234,15 @@ type Payment struct {
 }
 
 type PromoCode struct {
-	ID                 int64     `json:"id"`
-	PartnerID          int64     `json:"partner_id"`
-	Code               string    `json:"code"`
-	DiscountPercentage int32     `json:"discount_percentage"`
-	ValidUntil         time.Time `json:"valid_until"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ID                 int64         `json:"id"`
+	PartnerID          int64         `json:"partner_id"`
+	Code               string        `json:"code"`
+	DiscountPercentage int32         `json:"discount_percentage"`
+	ValidUntil         time.Time     `json:"valid_until"`
+	CreatedAt          time.Time     `json:"created_at"`
+	UpdatedAt          time.Time     `json:"updated_at"`
+	MaxUsages          sql.NullInt32 `json:"max_usages"`
+	CurrentUsages      sql.NullInt32 `json:"current_usages"`
 }
 
 type Review struct {
@@ -226,14 +257,18 @@ type Review struct {
 }
 
 type Service struct {
-	ID          int64     `json:"id"`
-	ProviderID  int64     `json:"provider_id"`
-	CategoryID  int64     `json:"category_id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Price       string    `json:"price"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int64          `json:"id"`
+	ProviderID  int64          `json:"provider_id"`
+	CategoryID  int64          `json:"category_id"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	Price       string         `json:"price"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	Subcategory sql.NullString `json:"subcategory"`
+	Country     sql.NullString `json:"country"`
+	City        sql.NullString `json:"city"`
+	District    sql.NullString `json:"district"`
 }
 
 type ServiceCategory struct {
@@ -244,13 +279,16 @@ type ServiceCategory struct {
 }
 
 type Subscription struct {
-	ID         int64                  `json:"id"`
-	ProviderID int64                  `json:"provider_id"`
-	StartDate  time.Time              `json:"start_date"`
-	EndDate    time.Time              `json:"end_date"`
-	Status     NullStatusSubscription `json:"status"`
-	CreatedAt  time.Time              `json:"created_at"`
-	UpdatedAt  time.Time              `json:"updated_at"`
+	ID               int64                  `json:"id"`
+	ProviderID       int64                  `json:"provider_id"`
+	StartDate        time.Time              `json:"start_date"`
+	EndDate          time.Time              `json:"end_date"`
+	Status           NullStatusSubscription `json:"status"`
+	CreatedAt        time.Time              `json:"created_at"`
+	UpdatedAt        time.Time              `json:"updated_at"`
+	SubscriptionType sql.NullString         `json:"subscription_type"`
+	Price            sql.NullString         `json:"price"`
+	PromoCodeID      sql.NullInt64          `json:"promo_code_id"`
 }
 
 type User struct {
@@ -267,4 +305,8 @@ type User struct {
 	Whatsapp         string         `json:"whatsapp"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	Description      sql.NullString `json:"description"`
+	IsVerified       sql.NullBool   `json:"is_verified"`
+	IsBlocked        sql.NullBool   `json:"is_blocked"`
 }

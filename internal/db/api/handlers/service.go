@@ -79,7 +79,9 @@ func (server *Server) getServiceByProviderID(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 	}
 
-	service, err := server.store.GetServiceByProviderID(ctx, user.ID)
+	
+
+	service, err := server.store.GetServiceByID(ctx, user.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -152,13 +154,13 @@ func (server *Server) listServiceByProviderID(ctx *gin.Context) {
 		return
 	}
 
-	arg := sqlc.ListServicesByProviderIDParams{
+	arg := sqlc.GetServicesByProviderIDParams{
 		ProviderID: user.ID,
 		Limit:      int64(req.PageSize),
 		Offset:     int64((req.PageID - 1) * req.PageSize),
 	}
 
-	services, err := server.store.ListServicesByProviderID(ctx, arg)
+	services, err := server.store.GetServicesByProviderID(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -319,7 +321,12 @@ func (server *Server) deleteService(ctx *gin.Context) {
 		return
 	}
 
-	err = server.store.DeleteService(ctx, service.ID)
+	arg := sqlc.DeleteServiceParams{
+		ID: service.ID,
+		ProviderID: service.ProviderID,
+	}
+
+	err = server.store.DeleteService(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 	}

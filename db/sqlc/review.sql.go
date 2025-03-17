@@ -7,27 +7,58 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
 
+const checkIfClientReviewedOrder = `-- name: CheckIfClientReviewedOrder :one
+SELECT EXISTS(
+        SELECT 1
+        FROM "reviews"
+        WHERE client_id = $1
+            AND order_id = $2
+    ) as has_review
+`
+
+type CheckIfClientReviewedOrderParams struct {
+	ClientID int64 `json:"client_id"`
+	OrderID  int64 `json:"order_id"`
+}
+
+// Проверяет, оставил ли клиент отзыв по данному заказу
+func (q *Queries) CheckIfClientReviewedOrder(ctx context.Context, arg CheckIfClientReviewedOrderParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, checkIfClientReviewedOrder, arg.ClientID, arg.OrderID)
+	var has_review bool
+	err := row.Scan(&has_review)
+	return has_review, err
+}
+
 const createReview = `-- name: CreateReview :one
-INSERT INTO reviews (order_id, client_id, provider_id, rating, comment)
+INSERT INTO "reviews" (
+        client_id,
+        provider_id,
+        order_id,
+        rating,
+        comment
+    )
 VALUES ($1, $2, $3, $4, $5)
 RETURNING id, order_id, client_id, provider_id, rating, comment, created_at, updated_at
 `
 
 type CreateReviewParams struct {
-	OrderID    int64  `json:"order_id"`
 	ClientID   int64  `json:"client_id"`
 	ProviderID int64  `json:"provider_id"`
+	OrderID    int64  `json:"order_id"`
 	Rating     int32  `json:"rating"`
 	Comment    string `json:"comment"`
 }
 
+// Создает новый отзыв от клиента об услугодателе
 func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (Review, error) {
 	row := q.db.QueryRowContext(ctx, createReview,
-		arg.OrderID,
 		arg.ClientID,
 		arg.ProviderID,
+		arg.OrderID,
 		arg.Rating,
 		arg.Comment,
 	)
@@ -46,87 +77,137 @@ func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (Rev
 }
 
 const deleteReview = `-- name: DeleteReview :exec
-DELETE FROM reviews
+DELETE FROM "reviews"
 WHERE id = $1
+    AND client_id = $2
 `
 
-func (q *Queries) DeleteReview(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteReview, id)
+type DeleteReviewParams struct {
+	ID       int64 `json:"id"`
+	ClientID int64 `json:"client_id"`
+}
+
+// Удаляет отзыв (только если пользователь является автором или администратором)
+func (q *Queries) DeleteReview(ctx context.Context, arg DeleteReviewParams) error {
+	_, err := q.db.ExecContext(ctx, deleteReview, arg.ID, arg.ClientID)
 	return err
 }
 
-const getProviderOverallRating = `-- name: GetProviderOverallRating :one
-SELECT provider_id, AVG(rating) AS overall_rating, COUNT(*) AS review_count
-FROM reviews
+const getAverageRatingForProvider = `-- name: GetAverageRatingForProvider :one
+SELECT COALESCE(AVG(rating), 0) as average_rating,
+    COUNT(*) as total_reviews
+FROM "reviews"
 WHERE provider_id = $1
-GROUP BY provider_id
 `
 
-type GetProviderOverallRatingRow struct {
-	ProviderID    int64  `json:"provider_id"`
-	OverallRating string `json:"overall_rating"`
-	ReviewCount   int64  `json:"review_count"`
+type GetAverageRatingForProviderRow struct {
+	AverageRating sql.NullString `json:"average_rating"`
+	TotalReviews  int64          `json:"total_reviews"`
 }
 
-func (q *Queries) GetProviderOverallRating(ctx context.Context, providerID int64) (GetProviderOverallRatingRow, error) {
-	row := q.db.QueryRowContext(ctx, getProviderOverallRating, providerID)
-	var i GetProviderOverallRatingRow
-	err := row.Scan(&i.ProviderID, &i.OverallRating, &i.ReviewCount)
+// Получает среднюю оценку услугодателя
+func (q *Queries) GetAverageRatingForProvider(ctx context.Context, providerID int64) (GetAverageRatingForProviderRow, error) {
+	row := q.db.QueryRowContext(ctx, getAverageRatingForProvider, providerID)
+	var i GetAverageRatingForProviderRow
+	err := row.Scan(&i.AverageRating, &i.TotalReviews)
 	return i, err
 }
 
 const getReviewByID = `-- name: GetReviewByID :one
-SELECT id, order_id, client_id, provider_id, rating, comment, created_at, updated_at FROM reviews
-WHERE id = $1
+SELECT r.id,
+    r.client_id,
+    r.provider_id,
+    r.order_id,
+    r.rating,
+    r.comment,
+    r.created_at,
+    uc.username as client_name,
+    up.username as provider_name
+FROM "reviews" r
+    JOIN "users" uc ON r.client_id = uc.id
+    JOIN "users" up ON r.provider_id = up.id
+WHERE r.id = $1
 `
 
-func (q *Queries) GetReviewByID(ctx context.Context, id int64) (Review, error) {
+type GetReviewByIDRow struct {
+	ID           int64     `json:"id"`
+	ClientID     int64     `json:"client_id"`
+	ProviderID   int64     `json:"provider_id"`
+	OrderID      int64     `json:"order_id"`
+	Rating       int32     `json:"rating"`
+	Comment      string    `json:"comment"`
+	CreatedAt    time.Time `json:"created_at"`
+	ClientName   string    `json:"client_name"`
+	ProviderName string    `json:"provider_name"`
+}
+
+// Получает конкретный отзыв по ID
+func (q *Queries) GetReviewByID(ctx context.Context, id int64) (GetReviewByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getReviewByID, id)
-	var i Review
+	var i GetReviewByIDRow
 	err := row.Scan(
 		&i.ID,
-		&i.OrderID,
 		&i.ClientID,
 		&i.ProviderID,
+		&i.OrderID,
 		&i.Rating,
 		&i.Comment,
 		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.ClientName,
+		&i.ProviderName,
 	)
 	return i, err
 }
 
-const listReviewsByProviderID = `-- name: ListReviewsByProviderID :many
-SELECT id, order_id, client_id, provider_id, rating, comment, created_at, updated_at FROM reviews
-WHERE provider_id = $1
-ORDER BY created_at DESC
+const getReviewsByProviderID = `-- name: GetReviewsByProviderID :many
+SELECT r.id,
+    r.client_id,
+    u.username as client_name,
+    u.photo_url as client_photo,
+    r.rating,
+    r.comment,
+    r.created_at
+FROM "reviews" r
+    JOIN "users" u ON r.client_id = u.id
+WHERE r.provider_id = $1
+ORDER BY r.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
-type ListReviewsByProviderIDParams struct {
+type GetReviewsByProviderIDParams struct {
 	ProviderID int64 `json:"provider_id"`
 	Limit      int64 `json:"limit"`
 	Offset     int64 `json:"offset"`
 }
 
-func (q *Queries) ListReviewsByProviderID(ctx context.Context, arg ListReviewsByProviderIDParams) ([]Review, error) {
-	rows, err := q.db.QueryContext(ctx, listReviewsByProviderID, arg.ProviderID, arg.Limit, arg.Offset)
+type GetReviewsByProviderIDRow struct {
+	ID          int64          `json:"id"`
+	ClientID    int64          `json:"client_id"`
+	ClientName  string         `json:"client_name"`
+	ClientPhoto sql.NullString `json:"client_photo"`
+	Rating      int32          `json:"rating"`
+	Comment     string         `json:"comment"`
+	CreatedAt   time.Time      `json:"created_at"`
+}
+
+// Получает все отзывы об услугодателе
+func (q *Queries) GetReviewsByProviderID(ctx context.Context, arg GetReviewsByProviderIDParams) ([]GetReviewsByProviderIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getReviewsByProviderID, arg.ProviderID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Review{}
+	items := []GetReviewsByProviderIDRow{}
 	for rows.Next() {
-		var i Review
+		var i GetReviewsByProviderIDRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.OrderID,
 			&i.ClientID,
-			&i.ProviderID,
+			&i.ClientName,
+			&i.ClientPhoto,
 			&i.Rating,
 			&i.Comment,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -139,33 +220,4 @@ func (q *Queries) ListReviewsByProviderID(ctx context.Context, arg ListReviewsBy
 		return nil, err
 	}
 	return items, nil
-}
-
-const updateReview = `-- name: UpdateReview :one
-UPDATE reviews
-SET rating = $2, comment = $3, updated_at = NOW()
-WHERE id = $1
-RETURNING id, order_id, client_id, provider_id, rating, comment, created_at, updated_at
-`
-
-type UpdateReviewParams struct {
-	ID      int64  `json:"id"`
-	Rating  int32  `json:"rating"`
-	Comment string `json:"comment"`
-}
-
-func (q *Queries) UpdateReview(ctx context.Context, arg UpdateReviewParams) (Review, error) {
-	row := q.db.QueryRowContext(ctx, updateReview, arg.ID, arg.Rating, arg.Comment)
-	var i Review
-	err := row.Scan(
-		&i.ID,
-		&i.OrderID,
-		&i.ClientID,
-		&i.ProviderID,
-		&i.Rating,
-		&i.Comment,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }

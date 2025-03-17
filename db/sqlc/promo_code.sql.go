@@ -13,7 +13,7 @@ import (
 const createPromoCode = `-- name: CreatePromoCode :one
 INSERT INTO promo_codes (partner_id, code, discount_percentage, valid_until)
 VALUES ($1, $2, $3, $4)
-RETURNING id, partner_id, code, discount_percentage, valid_until, created_at, updated_at
+RETURNING id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages
 `
 
 type CreatePromoCodeParams struct {
@@ -39,6 +39,8 @@ func (q *Queries) CreatePromoCode(ctx context.Context, arg CreatePromoCodeParams
 		&i.ValidUntil,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxUsages,
+		&i.CurrentUsages,
 	)
 	return i, err
 }
@@ -54,7 +56,7 @@ func (q *Queries) DeletePromoCode(ctx context.Context, id int64) error {
 }
 
 const getPromoCodeByID = `-- name: GetPromoCodeByID :one
-SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at FROM promo_codes
+SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages FROM promo_codes
 WHERE id = $1
 `
 
@@ -69,12 +71,14 @@ func (q *Queries) GetPromoCodeByID(ctx context.Context, id int64) (PromoCode, er
 		&i.ValidUntil,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxUsages,
+		&i.CurrentUsages,
 	)
 	return i, err
 }
 
 const getPromoCodeByPartnerID = `-- name: GetPromoCodeByPartnerID :one
-SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at FROM promo_codes
+SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages FROM promo_codes
 WHERE partner_id = $1
 `
 
@@ -89,12 +93,14 @@ func (q *Queries) GetPromoCodeByPartnerID(ctx context.Context, partnerID int64) 
 		&i.ValidUntil,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxUsages,
+		&i.CurrentUsages,
 	)
 	return i, err
 }
 
 const listPromoCodes = `-- name: ListPromoCodes :many
-SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at FROM promo_codes
+SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages FROM promo_codes
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -121,6 +127,8 @@ func (q *Queries) ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) 
 			&i.ValidUntil,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.MaxUsages,
+			&i.CurrentUsages,
 		); err != nil {
 			return nil, err
 		}
@@ -139,7 +147,7 @@ const updatePromoCode = `-- name: UpdatePromoCode :one
 UPDATE promo_codes
 SET partner_id = $2, code = $3, discount_percentage = $4, valid_until = $5, updated_at = NOW()
 WHERE id = $1
-RETURNING id, partner_id, code, discount_percentage, valid_until, created_at, updated_at
+RETURNING id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages
 `
 
 type UpdatePromoCodeParams struct {
@@ -167,6 +175,8 @@ func (q *Queries) UpdatePromoCode(ctx context.Context, arg UpdatePromoCodeParams
 		&i.ValidUntil,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaxUsages,
+		&i.CurrentUsages,
 	)
 	return i, err
 }
