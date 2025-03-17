@@ -118,3 +118,11 @@ WHERE (
     )
 ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: ListServicesByProviderIDAndCategory :many
+SELECT s.*,
+    sc.name as category_name
+FROM "services" s
+    JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE s.provider_id = $1
+    AND s.category_id = $2;

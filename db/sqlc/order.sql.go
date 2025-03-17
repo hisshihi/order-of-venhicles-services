@@ -11,43 +11,73 @@ import (
 	"time"
 )
 
-const acceptOrderByProvider = `-- name: AcceptOrderByProvider :one
+const acceptOrderByProviderID = `-- name: AcceptOrderByProviderID :one
 UPDATE "orders"
 SET provider_accepted = true,
-    provider_message = $3,
+    provider_message = $4,
+    service_id = $3,
     status = 'accepted',
     updated_at = now()
 WHERE id = $1
     AND -- Проверяем, что провайдер предлагает услуги в категории заказа
     (
         SELECT category_id
-        FROM "services"
-        WHERE id = (
-                SELECT service_id
-                FROM "orders"
-                WHERE id = $1
-            )
+        FROM "orders"
+        WHERE id = $1
     ) IN (
         SELECT DISTINCT category_id
         FROM "services"
         WHERE provider_id = $2
     )
-RETURNING id, client_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
+    AND -- Заказ не должен быть уже принятым
+    (
+        provider_accepted = false
+        OR provider_accepted IS NULL
+    )
+    AND -- Заказ должен иметь статус pending
+    status = 'pending'
+    AND -- Город сервиса должен совпадать с городом клиента или один из них должен быть NULL
+    EXISTS (
+        SELECT 1
+        FROM "orders" o
+            JOIN "users" client ON o.client_id = client.id
+            JOIN "services" s ON s.id = $3
+        WHERE o.id = $1
+            AND s.provider_id = $2
+            AND (
+                -- Или город сервиса совпадает с городом клиента
+                (
+                    s.city IS NOT NULL
+                    AND client.city IS NOT NULL
+                    AND s.city = client.city
+                ) -- Или сервис не привязан к городу (работает везде)
+                OR s.city IS NULL -- Или клиент не указал город (не важно где)
+                OR client.city IS NULL
+            )
+    )
+RETURNING id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
 `
 
-type AcceptOrderByProviderParams struct {
+type AcceptOrderByProviderIDParams struct {
 	Column1 sql.NullInt64  `json:"column_1"`
 	Column2 sql.NullInt64  `json:"column_2"`
-	Column3 sql.NullString `json:"column_3"`
+	Column3 sql.NullInt64  `json:"column_3"`
+	Column4 sql.NullString `json:"column_4"`
 }
 
-// Провайдер принимает заказ
-func (q *Queries) AcceptOrderByProvider(ctx context.Context, arg AcceptOrderByProviderParams) (Order, error) {
-	row := q.db.QueryRowContext(ctx, acceptOrderByProvider, arg.Column1, arg.Column2, arg.Column3)
+// Провайдер принимает заказ и указывает свою услугу
+func (q *Queries) AcceptOrderByProviderID(ctx context.Context, arg AcceptOrderByProviderIDParams) (Order, error) {
+	row := q.db.QueryRowContext(ctx, acceptOrderByProviderID,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+	)
 	var i Order
 	err := row.Scan(
 		&i.ID,
 		&i.ClientID,
+		&i.CategoryID,
 		&i.ServiceID,
 		&i.Status,
 		&i.CreatedAt,
@@ -63,18 +93,18 @@ func (q *Queries) AcceptOrderByProvider(ctx context.Context, arg AcceptOrderByPr
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO "orders" (
         client_id,
-        service_id,
+        category_id,
         status,
         client_message,
         order_date
     )
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, client_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
+RETURNING id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
 `
 
 type CreateOrderParams struct {
 	ClientID      int64            `json:"client_id"`
-	ServiceID     int64            `json:"service_id"`
+	CategoryID    int64            `json:"category_id"`
 	Status        NullStatusOrders `json:"status"`
 	ClientMessage sql.NullString   `json:"client_message"`
 	OrderDate     sql.NullTime     `json:"order_date"`
@@ -83,7 +113,7 @@ type CreateOrderParams struct {
 func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
 	row := q.db.QueryRowContext(ctx, createOrder,
 		arg.ClientID,
-		arg.ServiceID,
+		arg.CategoryID,
 		arg.Status,
 		arg.ClientMessage,
 		arg.OrderDate,
@@ -92,6 +122,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 	err := row.Scan(
 		&i.ID,
 		&i.ClientID,
+		&i.CategoryID,
 		&i.ServiceID,
 		&i.Status,
 		&i.CreatedAt,
@@ -115,25 +146,28 @@ func (q *Queries) DeleteOrder(ctx context.Context, id int64) error {
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT o.id, o.client_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
-    s.title as service_title,
+SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
+    sc.name as category_name,
     u.username as client_name,
     u.phone as client_phone,
     u.whatsapp as client_whatsapp,
     p.username as provider_name,
     p.phone as provider_phone,
-    p.whatsapp as provider_whatsapp
+    p.whatsapp as provider_whatsapp,
+    s.title as service_title
 FROM "orders" o
-    JOIN "services" s ON o.service_id = s.id
+    JOIN "service_categories" sc ON o.category_id = sc.id
     JOIN "users" u ON o.client_id = u.id
-    JOIN "users" p ON s.provider_id = p.id
+    LEFT JOIN "services" s ON s.id = o.service_id
+    LEFT JOIN "users" p ON s.provider_id = p.id
 WHERE o.id = $1
 `
 
 type GetOrderByIDRow struct {
 	ID               int64            `json:"id"`
 	ClientID         int64            `json:"client_id"`
-	ServiceID        int64            `json:"service_id"`
+	CategoryID       int64            `json:"category_id"`
+	ServiceID        sql.NullInt64    `json:"service_id"`
 	Status           NullStatusOrders `json:"status"`
 	CreatedAt        time.Time        `json:"created_at"`
 	UpdatedAt        time.Time        `json:"updated_at"`
@@ -141,13 +175,14 @@ type GetOrderByIDRow struct {
 	ProviderMessage  sql.NullString   `json:"provider_message"`
 	ClientMessage    sql.NullString   `json:"client_message"`
 	OrderDate        sql.NullTime     `json:"order_date"`
-	ServiceTitle     string           `json:"service_title"`
+	CategoryName     string           `json:"category_name"`
 	ClientName       string           `json:"client_name"`
 	ClientPhone      string           `json:"client_phone"`
 	ClientWhatsapp   string           `json:"client_whatsapp"`
-	ProviderName     string           `json:"provider_name"`
-	ProviderPhone    string           `json:"provider_phone"`
-	ProviderWhatsapp string           `json:"provider_whatsapp"`
+	ProviderName     sql.NullString   `json:"provider_name"`
+	ProviderPhone    sql.NullString   `json:"provider_phone"`
+	ProviderWhatsapp sql.NullString   `json:"provider_whatsapp"`
+	ServiceTitle     sql.NullString   `json:"service_title"`
 }
 
 func (q *Queries) GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, error) {
@@ -156,6 +191,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, 
 	err := row.Scan(
 		&i.ID,
 		&i.ClientID,
+		&i.CategoryID,
 		&i.ServiceID,
 		&i.Status,
 		&i.CreatedAt,
@@ -164,29 +200,35 @@ func (q *Queries) GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, 
 		&i.ProviderMessage,
 		&i.ClientMessage,
 		&i.OrderDate,
-		&i.ServiceTitle,
+		&i.CategoryName,
 		&i.ClientName,
 		&i.ClientPhone,
 		&i.ClientWhatsapp,
 		&i.ProviderName,
 		&i.ProviderPhone,
 		&i.ProviderWhatsapp,
+		&i.ServiceTitle,
 	)
 	return i, err
 }
 
 const getOrderStatistics = `-- name: GetOrderStatistics :one
-WITH provider_services AS (
-    SELECT id
-    FROM "services"
-    WHERE provider_id = $1
-),
-provider_orders AS (
-    SELECT id, client_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
-    FROM "orders"
-    WHERE service_id IN (
+WITH provider_orders AS (
+    SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date
+    FROM "orders" o
+    WHERE o.service_id IN (
             SELECT id
-            FROM provider_services
+            FROM "services"
+            WHERE provider_id = $1
+        )
+        OR (
+            o.provider_accepted = true
+            AND EXISTS (
+                SELECT 1
+                FROM "services" s
+                WHERE s.provider_id = $1
+                    AND s.category_id = o.category_id
+            )
         )
 )
 SELECT COUNT(*) FILTER (
@@ -214,8 +256,8 @@ type GetOrderStatisticsRow struct {
 }
 
 // Получает статистику заказов для услугодателя
-func (q *Queries) GetOrderStatistics(ctx context.Context, providerID int64) (GetOrderStatisticsRow, error) {
-	row := q.db.QueryRowContext(ctx, getOrderStatistics, providerID)
+func (q *Queries) GetOrderStatistics(ctx context.Context, dollar_1 sql.NullInt64) (GetOrderStatisticsRow, error) {
+	row := q.db.QueryRowContext(ctx, getOrderStatistics, dollar_1)
 	var i GetOrderStatisticsRow
 	err := row.Scan(
 		&i.PendingCount,
@@ -227,39 +269,31 @@ func (q *Queries) GetOrderStatistics(ctx context.Context, providerID int64) (Get
 	return i, err
 }
 
-const listAvailableOrdersForProvider = `-- name: ListAvailableOrdersForProvider :many
-SELECT o.id, o.client_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
-    s.title as service_title,
-    c.name as category_name,
+const getOrdersByCategory = `-- name: GetOrdersByCategory :many
+SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
+    sc.name as category_name,
     u.username as client_name
 FROM "orders" o
-    JOIN "services" s ON o.service_id = s.id
-    JOIN "service_categories" c ON s.category_id = c.id
+    JOIN "service_categories" sc ON o.category_id = sc.id
     JOIN "users" u ON o.client_id = u.id
-WHERE -- Заказ все еще открыт (pending)
-    o.status = 'pending'
-    AND -- Провайдер предлагает услуги в этой категории
-    s.category_id IN (
-        SELECT DISTINCT category_id
-        FROM "services"
-        WHERE provider_id = $1
-    )
-    AND -- Заказ не был принят провайдером
-    o.provider_accepted = false
+WHERE o.category_id = $1
+    AND o.status = 'pending'
+    AND o.provider_accepted = false
 ORDER BY o.created_at DESC
 LIMIT $2 OFFSET $3
 `
 
-type ListAvailableOrdersForProviderParams struct {
-	Column1 sql.NullInt64 `json:"column_1"`
-	Column2 sql.NullInt64 `json:"column_2"`
-	Column3 sql.NullInt64 `json:"column_3"`
+type GetOrdersByCategoryParams struct {
+	CategoryID int64 `json:"category_id"`
+	Limit      int64 `json:"limit"`
+	Offset     int64 `json:"offset"`
 }
 
-type ListAvailableOrdersForProviderRow struct {
+type GetOrdersByCategoryRow struct {
 	ID               int64            `json:"id"`
 	ClientID         int64            `json:"client_id"`
-	ServiceID        int64            `json:"service_id"`
+	CategoryID       int64            `json:"category_id"`
+	ServiceID        sql.NullInt64    `json:"service_id"`
 	Status           NullStatusOrders `json:"status"`
 	CreatedAt        time.Time        `json:"created_at"`
 	UpdatedAt        time.Time        `json:"updated_at"`
@@ -267,24 +301,24 @@ type ListAvailableOrdersForProviderRow struct {
 	ProviderMessage  sql.NullString   `json:"provider_message"`
 	ClientMessage    sql.NullString   `json:"client_message"`
 	OrderDate        sql.NullTime     `json:"order_date"`
-	ServiceTitle     string           `json:"service_title"`
 	CategoryName     string           `json:"category_name"`
 	ClientName       string           `json:"client_name"`
 }
 
-// Получает список доступных заказов для провайдера услуг
-func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAvailableOrdersForProviderParams) ([]ListAvailableOrdersForProviderRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAvailableOrdersForProvider, arg.Column1, arg.Column2, arg.Column3)
+// Получает список заказов по категории
+func (q *Queries) GetOrdersByCategory(ctx context.Context, arg GetOrdersByCategoryParams) ([]GetOrdersByCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOrdersByCategory, arg.CategoryID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListAvailableOrdersForProviderRow{}
+	items := []GetOrdersByCategoryRow{}
 	for rows.Next() {
-		var i ListAvailableOrdersForProviderRow
+		var i GetOrdersByCategoryRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ClientID,
+			&i.CategoryID,
 			&i.ServiceID,
 			&i.Status,
 			&i.CreatedAt,
@@ -293,7 +327,6 @@ func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAv
 			&i.ProviderMessage,
 			&i.ClientMessage,
 			&i.OrderDate,
-			&i.ServiceTitle,
 			&i.CategoryName,
 			&i.ClientName,
 		); err != nil {
@@ -310,13 +343,99 @@ func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAv
 	return items, nil
 }
 
+const listAvailableOrdersForProvider = `-- name: ListAvailableOrdersForProvider :many
+SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
+    sc.name as category_name,
+    u.username as client_name,
+    u.city as client_city
+FROM "orders" o
+    JOIN "service_categories" sc ON o.category_id = sc.id
+    JOIN "users" u ON o.client_id = u.id
+WHERE -- Заказ все еще открыт (pending)
+    o.status = 'pending'
+    AND -- Провайдер предлагает услуги в этой категории
+    o.category_id IN (
+        SELECT DISTINCT category_id
+        FROM "services"
+        WHERE provider_id = $1
+    )
+    AND -- Заказ не был принят провайдером
+    o.provider_accepted = false
+ORDER BY o.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListAvailableOrdersForProviderParams struct {
+	ProviderID int64 `json:"provider_id"`
+	Limit      int64 `json:"limit"`
+	Offset     int64 `json:"offset"`
+}
+
+type ListAvailableOrdersForProviderRow struct {
+	ID               int64            `json:"id"`
+	ClientID         int64            `json:"client_id"`
+	CategoryID       int64            `json:"category_id"`
+	ServiceID        sql.NullInt64    `json:"service_id"`
+	Status           NullStatusOrders `json:"status"`
+	CreatedAt        time.Time        `json:"created_at"`
+	UpdatedAt        time.Time        `json:"updated_at"`
+	ProviderAccepted sql.NullBool     `json:"provider_accepted"`
+	ProviderMessage  sql.NullString   `json:"provider_message"`
+	ClientMessage    sql.NullString   `json:"client_message"`
+	OrderDate        sql.NullTime     `json:"order_date"`
+	CategoryName     string           `json:"category_name"`
+	ClientName       string           `json:"client_name"`
+	ClientCity       sql.NullString   `json:"client_city"`
+}
+
+// Получает список доступных заказов для провайдера услуг
+func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAvailableOrdersForProviderParams) ([]ListAvailableOrdersForProviderRow, error) {
+	rows, err := q.db.QueryContext(ctx, listAvailableOrdersForProvider, arg.ProviderID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAvailableOrdersForProviderRow{}
+	for rows.Next() {
+		var i ListAvailableOrdersForProviderRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClientID,
+			&i.CategoryID,
+			&i.ServiceID,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProviderAccepted,
+			&i.ProviderMessage,
+			&i.ClientMessage,
+			&i.OrderDate,
+			&i.CategoryName,
+			&i.ClientName,
+			&i.ClientCity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOrdersByClientID = `-- name: ListOrdersByClientID :many
-SELECT o.id, o.client_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
+SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
+    sc.name as category_name,
     s.title as service_title,
     p.username as provider_name
 FROM "orders" o
-    JOIN "services" s ON o.service_id = s.id
-    JOIN "users" p ON s.provider_id = p.id
+    JOIN "service_categories" sc ON o.category_id = sc.id
+    LEFT JOIN "services" s ON o.service_id = s.id
+    LEFT JOIN "users" p ON s.provider_id = p.id
 WHERE o.client_id = $1
 ORDER BY o.created_at DESC
 LIMIT $2 OFFSET $3
@@ -331,7 +450,8 @@ type ListOrdersByClientIDParams struct {
 type ListOrdersByClientIDRow struct {
 	ID               int64            `json:"id"`
 	ClientID         int64            `json:"client_id"`
-	ServiceID        int64            `json:"service_id"`
+	CategoryID       int64            `json:"category_id"`
+	ServiceID        sql.NullInt64    `json:"service_id"`
 	Status           NullStatusOrders `json:"status"`
 	CreatedAt        time.Time        `json:"created_at"`
 	UpdatedAt        time.Time        `json:"updated_at"`
@@ -339,8 +459,9 @@ type ListOrdersByClientIDRow struct {
 	ProviderMessage  sql.NullString   `json:"provider_message"`
 	ClientMessage    sql.NullString   `json:"client_message"`
 	OrderDate        sql.NullTime     `json:"order_date"`
-	ServiceTitle     string           `json:"service_title"`
-	ProviderName     string           `json:"provider_name"`
+	CategoryName     string           `json:"category_name"`
+	ServiceTitle     sql.NullString   `json:"service_title"`
+	ProviderName     sql.NullString   `json:"provider_name"`
 }
 
 func (q *Queries) ListOrdersByClientID(ctx context.Context, arg ListOrdersByClientIDParams) ([]ListOrdersByClientIDRow, error) {
@@ -355,6 +476,7 @@ func (q *Queries) ListOrdersByClientID(ctx context.Context, arg ListOrdersByClie
 		if err := rows.Scan(
 			&i.ID,
 			&i.ClientID,
+			&i.CategoryID,
 			&i.ServiceID,
 			&i.Status,
 			&i.CreatedAt,
@@ -363,6 +485,7 @@ func (q *Queries) ListOrdersByClientID(ctx context.Context, arg ListOrdersByClie
 			&i.ProviderMessage,
 			&i.ClientMessage,
 			&i.OrderDate,
+			&i.CategoryName,
 			&i.ServiceTitle,
 			&i.ProviderName,
 		); err != nil {
@@ -382,24 +505,27 @@ func (q *Queries) ListOrdersByClientID(ctx context.Context, arg ListOrdersByClie
 const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
 SET client_id = $2,
-    service_id = $3,
-    status = $4,
+    category_id = $3,
+    service_id = $4,
+    status = $5,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, client_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
+RETURNING id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
 `
 
 type UpdateOrderParams struct {
-	ID        int64            `json:"id"`
-	ClientID  int64            `json:"client_id"`
-	ServiceID int64            `json:"service_id"`
-	Status    NullStatusOrders `json:"status"`
+	ID         int64            `json:"id"`
+	ClientID   int64            `json:"client_id"`
+	CategoryID int64            `json:"category_id"`
+	ServiceID  sql.NullInt64    `json:"service_id"`
+	Status     NullStatusOrders `json:"status"`
 }
 
 func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error) {
 	row := q.db.QueryRowContext(ctx, updateOrder,
 		arg.ID,
 		arg.ClientID,
+		arg.CategoryID,
 		arg.ServiceID,
 		arg.Status,
 	)
@@ -407,6 +533,7 @@ func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order
 	err := row.Scan(
 		&i.ID,
 		&i.ClientID,
+		&i.CategoryID,
 		&i.ServiceID,
 		&i.Status,
 		&i.CreatedAt,
@@ -424,7 +551,7 @@ UPDATE "orders"
 SET status = $2,
     updated_at = now()
 WHERE id = $1
-RETURNING id, client_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
+RETURNING id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date
 `
 
 type UpdateOrderStatusParams struct {
@@ -438,6 +565,7 @@ func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusPa
 	err := row.Scan(
 		&i.ID,
 		&i.ClientID,
+		&i.CategoryID,
 		&i.ServiceID,
 		&i.Status,
 		&i.CreatedAt,

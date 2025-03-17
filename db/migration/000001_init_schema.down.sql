@@ -2,6 +2,7 @@
 ALTER TABLE "services" DROP CONSTRAINT IF EXISTS "services_provider_id_fkey";
 ALTER TABLE "services" DROP CONSTRAINT IF EXISTS "services_category_id_fkey";
 ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_client_id_fkey";
+ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_category_id_fkey";
 ALTER TABLE "orders" DROP CONSTRAINT IF EXISTS "orders_service_id_fkey";
 ALTER TABLE "subscriptions" DROP CONSTRAINT IF EXISTS "subscriptions_provider_id_fkey";
 ALTER TABLE "promo_codes" DROP CONSTRAINT IF EXISTS "promo_codes_partner_id_fkey";

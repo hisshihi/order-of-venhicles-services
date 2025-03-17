@@ -204,7 +204,8 @@ type Message struct {
 type Order struct {
 	ID               int64            `json:"id"`
 	ClientID         int64            `json:"client_id"`
-	ServiceID        int64            `json:"service_id"`
+	CategoryID       int64            `json:"category_id"`
+	ServiceID        sql.NullInt64    `json:"service_id"`
 	Status           NullStatusOrders `json:"status"`
 	CreatedAt        time.Time        `json:"created_at"`
 	UpdatedAt        time.Time        `json:"updated_at"`

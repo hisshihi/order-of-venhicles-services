@@ -471,6 +471,73 @@ func (q *Queries) ListServicesByLocation(ctx context.Context, arg ListServicesBy
 	return items, nil
 }
 
+const listServicesByProviderIDAndCategory = `-- name: ListServicesByProviderIDAndCategory :many
+SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
+    sc.name as category_name
+FROM "services" s
+    JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE s.provider_id = $1
+    AND s.category_id = $2
+`
+
+type ListServicesByProviderIDAndCategoryParams struct {
+	ProviderID int64 `json:"provider_id"`
+	CategoryID int64 `json:"category_id"`
+}
+
+type ListServicesByProviderIDAndCategoryRow struct {
+	ID           int64          `json:"id"`
+	ProviderID   int64          `json:"provider_id"`
+	CategoryID   int64          `json:"category_id"`
+	Title        string         `json:"title"`
+	Description  string         `json:"description"`
+	Price        string         `json:"price"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	Subcategory  sql.NullString `json:"subcategory"`
+	Country      sql.NullString `json:"country"`
+	City         sql.NullString `json:"city"`
+	District     sql.NullString `json:"district"`
+	CategoryName string         `json:"category_name"`
+}
+
+func (q *Queries) ListServicesByProviderIDAndCategory(ctx context.Context, arg ListServicesByProviderIDAndCategoryParams) ([]ListServicesByProviderIDAndCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, listServicesByProviderIDAndCategory, arg.ProviderID, arg.CategoryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServicesByProviderIDAndCategoryRow{}
+	for rows.Next() {
+		var i ListServicesByProviderIDAndCategoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProviderID,
+			&i.CategoryID,
+			&i.Title,
+			&i.Description,
+			&i.Price,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Subcategory,
+			&i.Country,
+			&i.City,
+			&i.District,
+			&i.CategoryName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const searchServices = `-- name: SearchServices :many
 SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
     u.username as provider_name,

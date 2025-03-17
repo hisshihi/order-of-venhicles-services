@@ -46,7 +46,8 @@ CREATE TABLE "services" (
 CREATE TABLE "orders" (
     "id" bigserial PRIMARY KEY NOT NULL,
     "client_id" bigint NOT NULL,
-    "service_id" bigint NOT NULL,
+    "category_id" bigint NOT NULL,
+    "service_id" bigint,
     "status" "status_orders",
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT '0001-01-01 00:00:00Z'
@@ -98,6 +99,7 @@ CREATE INDEX ON "services" ("provider_id");
 CREATE INDEX ON "services" ("category_id");
 CREATE INDEX ON "services" ("price");
 CREATE INDEX ON "orders" ("client_id");
+CREATE INDEX ON "orders" ("category_id");
 CREATE INDEX ON "orders" ("service_id");
 CREATE INDEX ON "orders" ("status");
 CREATE INDEX ON "subscriptions" ("provider_id");
@@ -115,6 +117,8 @@ ALTER TABLE "services"
 ADD FOREIGN KEY ("category_id") REFERENCES "service_categories" ("id");
 ALTER TABLE "orders"
 ADD FOREIGN KEY ("client_id") REFERENCES "users" ("id");
+ALTER TABLE "orders"
+ADD FOREIGN KEY ("category_id") REFERENCES "services" ("id");
 ALTER TABLE "orders"
 ADD FOREIGN KEY ("service_id") REFERENCES "services" ("id");
 ALTER TABLE "subscriptions"

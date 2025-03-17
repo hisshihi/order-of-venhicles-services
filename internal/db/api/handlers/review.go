@@ -53,7 +53,7 @@ func (server *Server) createReview(ctx *gin.Context) {
 		return
 	}
 
-	service, err := server.store.GetServiceByID(ctx, order.ServiceID)
+	service, err := server.store.GetServiceByID(ctx, order.ServiceID.Int64)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return

@@ -109,6 +109,7 @@ func (server *Server) setupServer() {
 	// Добавьте здесь маршруты для клиентов
 	clientRoutes.POST("/orders", server.createOrder)
 	clientRoutes.GET("/orders/:id", server.getOrderByID)
+	clientRoutes.POST("/orders/:id/status", server.updateOrderStatus)
 	clientRoutes.GET("/orders/", server.listOrders)
 	clientRoutes.POST("/reviews", server.createReview)
 	clientRoutes.GET("/reviews", server.listReviewByProviderID)
@@ -131,6 +132,10 @@ func (server *Server) setupServer() {
 	providerRoutes.GET("/services/list/u", server.listServiceByProviderID)
 	providerRoutes.PUT("/services/:id", server.updateService)
 	providerRoutes.DELETE("/services/:id", server.deleteService)
+	providerRoutes.GET("/orders/available", server.listAvailableOrders)
+	providerRoutes.GET("/orders/statistics", server.getOrdersStatistics)
+	providerRoutes.POST("/orders/:id/accept", server.acceptOrder)
+	providerRoutes.GET("/orders/category/:category_id", server.getOrdersByCategory)
 
 	// Маршруты для партнеров
 	partnerRoutes := router.Group("/partner")

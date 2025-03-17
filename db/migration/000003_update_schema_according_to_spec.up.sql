@@ -38,7 +38,7 @@ CREATE INDEX IF NOT EXISTS "messages_receiver_id_idx" ON "messages" ("receiver_i
 CREATE INDEX IF NOT EXISTS "messages_created_at_idx" ON "messages" ("created_at");
 -- 6. Расширение таблицы promo_codes для привязки к партнерам
 ALTER TABLE "promo_codes"
-ADD COLUMN IF NOT EXISTS "max_usages" integer DEFAULT 100;
+ADD COLUMN IF NOT EXISTS "max_usages" integer DEFAULT 1;
 ALTER TABLE "promo_codes"
 ADD COLUMN IF NOT EXISTS "current_usages" integer DEFAULT 0;
 -- 7. Расширение таблицы subscriptions для дополнительной информации

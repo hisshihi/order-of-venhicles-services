@@ -10,8 +10,8 @@ import (
 )
 
 type Querier interface {
-	// Провайдер принимает заказ
-	AcceptOrderByProvider(ctx context.Context, arg AcceptOrderByProviderParams) (Order, error)
+	// Провайдер принимает заказ и указывает свою услугу
+	AcceptOrderByProviderID(ctx context.Context, arg AcceptOrderByProviderIDParams) (Order, error)
 	// Добавляет услугодателя в избранное клиента
 	AddProviderToFavorites(ctx context.Context, arg AddProviderToFavoritesParams) (Favorite, error)
 	// Проверяет, оставил ли клиент отзыв по данному заказу
@@ -44,7 +44,9 @@ type Querier interface {
 	GetMessagesByUsers(ctx context.Context, arg GetMessagesByUsersParams) ([]GetMessagesByUsersRow, error)
 	GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, error)
 	// Получает статистику заказов для услугодателя
-	GetOrderStatistics(ctx context.Context, providerID int64) (GetOrderStatisticsRow, error)
+	GetOrderStatistics(ctx context.Context, dollar_1 sql.NullInt64) (GetOrderStatisticsRow, error)
+	// Получает список заказов по категории
+	GetOrdersByCategory(ctx context.Context, arg GetOrdersByCategoryParams) ([]GetOrdersByCategoryRow, error)
 	GetPaymentByID(ctx context.Context, id int64) (Payment, error)
 	GetPromoCodeByID(ctx context.Context, id int64) (PromoCode, error)
 	GetPromoCodeByPartnerID(ctx context.Context, partnerID int64) (PromoCode, error)
@@ -59,6 +61,7 @@ type Querier interface {
 	// Получает количество непрочитанных сообщений для пользователя
 	GetUnreadMessagesCount(ctx context.Context, receiverID int64) (int64, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserByIDFromAdmin(ctx context.Context, id int64) (User, error)
 	GetUserByIDFromUser(ctx context.Context, id int64) (User, error)
 	// Получает список недавних чатов пользователя
@@ -74,6 +77,7 @@ type Querier interface {
 	ListServices(ctx context.Context, arg ListServicesParams) ([]ListServicesRow, error)
 	ListServicesByCategory(ctx context.Context, arg ListServicesByCategoryParams) ([]ListServicesByCategoryRow, error)
 	ListServicesByLocation(ctx context.Context, arg ListServicesByLocationParams) ([]ListServicesByLocationRow, error)
+	ListServicesByProviderIDAndCategory(ctx context.Context, arg ListServicesByProviderIDAndCategoryParams) ([]ListServicesByProviderIDAndCategoryRow, error)
 	ListSubscriptions(ctx context.Context, arg ListSubscriptionsParams) ([]Subscription, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	ListUsersByEmail(ctx context.Context, dollar_1 sql.NullString) ([]User, error)
