@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -125,6 +126,95 @@ func (server *Server) checkSubscriptionActive(ctx *gin.Context) {
 		"status":                  subscription.Status.StatusSubscription,
 		"updated_at":              subscription.UpdatedAt,
 	})
+}
+
+type subscriptionUpdateResponse struct {
+	ID         int64                       `json:"id"`
+	ProviderID int64                       `json:"provider_id"`
+	StartDate  time.Time                   `json:"start_date"`
+	EndDate    time.Time                   `json:"end_date"`
+	Status     sqlc.NullStatusSubscription `json:"status"`
+	CreatedAt  time.Time                   `json:"created_at"`
+	UpdatedAt  time.Time                   `json:"updated_at"`
+}
+
+// Обновление подписки
+func (server *Server) updateSubsciption(ctx *gin.Context) {
+	var req createSubscriptionRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		return
+	}
+
+	if user.Role.Role != sqlc.RoleProvider {
+		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("только услугодатели могут оформить подписку")))
+		return
+	}
+
+	// Проверяем, нет ли уже активной подписки
+	activeSubscription, err := server.store.GetActiveSubscriptionForProvider(ctx, user.ID)
+	fmt.Println(activeSubscription)
+	if err != nil && err != sql.ErrNoRows {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	if err == nil && activeSubscription.Status.StatusSubscription == sqlc.StatusSubscriptionActive {
+		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("у вас уже есть активная подписка")))
+		return
+	}
+
+	startDate := time.Now()
+	var endDate time.Time
+
+	switch req.SelectSubscription {
+	case "14days":
+		endDate = startDate.AddDate(0, 0, 14)
+	case "month":
+		endDate = startDate.AddDate(0, 1, 0)
+	case "year":
+		endDate = startDate.AddDate(1, 0, 0)
+	}
+
+	findSubscription, err := server.store.GetSubscriptionByProviderID(ctx, user.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.UpdateSubscriptionParams{
+		ID:         findSubscription.ID,
+		ProviderID: user.ID,
+		StartDate:  startDate,
+		EndDate:    endDate,
+		Status:     sqlc.NullStatusSubscription{StatusSubscription: sqlc.StatusSubscriptionActive, Valid: true},
+	}
+
+	subscription, err := server.store.UpdateSubscription(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	rsp := subscriptionUpdateResponse{
+		ID:         subscription.ID,
+		ProviderID: subscription.ProviderID,
+		StartDate:  subscription.StartDate,
+		EndDate:    subscription.EndDate,
+		Status:     subscription.Status,
+		CreatedAt:  subscription.CreatedAt,
+		UpdatedAt:  subscription.UpdatedAt,
+	}
+
+	ctx.JSON(http.StatusOK, rsp)
 }
 
 // Запуск переодической проверки истекших подписок

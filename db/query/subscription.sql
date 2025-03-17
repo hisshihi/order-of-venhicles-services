@@ -6,6 +6,10 @@ RETURNING *;
 SELECT *
 FROM subscriptions
 WHERE id = $1;
+-- name: GetSubscriptionByProviderID :one
+SELECT *
+FROM subscriptions
+WHERE provider_id = $1;
 -- name: ListSubscriptions :many
 SELECT *
 FROM subscriptions

@@ -151,6 +151,30 @@ func (q *Queries) GetSubscriptionByID(ctx context.Context, id int64) (Subscripti
 	return i, err
 }
 
+const getSubscriptionByProviderID = `-- name: GetSubscriptionByProviderID :one
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+FROM subscriptions
+WHERE provider_id = $1
+`
+
+func (q *Queries) GetSubscriptionByProviderID(ctx context.Context, providerID int64) (Subscription, error) {
+	row := q.db.QueryRowContext(ctx, getSubscriptionByProviderID, providerID)
+	var i Subscription
+	err := row.Scan(
+		&i.ID,
+		&i.ProviderID,
+		&i.StartDate,
+		&i.EndDate,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.SubscriptionType,
+		&i.Price,
+		&i.PromoCodeID,
+	)
+	return i, err
+}
+
 const listSubscriptions = `-- name: ListSubscriptions :many
 SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
 FROM subscriptions

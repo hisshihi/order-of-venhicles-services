@@ -132,6 +132,7 @@ func (server *Server) setupServer() {
 
 	// Маршруты, которые НЕ требуют подписки
 	providerRoutes.POST("/subscription", server.createSubscription)
+	providerRoutes.POST("/subscription/update", server.updateSubsciption)
 	providerRoutes.GET("/subscription/check", server.checkSubscriptionActive)
 
 	// Маршруты, которые требуют подписку
