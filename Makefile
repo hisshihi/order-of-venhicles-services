@@ -23,6 +23,6 @@ test:
 	go test -v -cover ./...
 
 server:
-	go run cmd/main.go
+	go run cmd/main.go -config=cmd/app.env
 
 .PHONY: createdb dropdb migrateup migratedown migratedown1 migrateup1 sqlc test server 
