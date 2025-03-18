@@ -27,7 +27,7 @@ func main() {
 		log.Fatal("cannot create server:", err)
 	}
 
-	err = server.Start(config.ServerAddress)
+	err = server.Start(config.DBAddress)
 	if err != nil {
 		log.Fatal("cannot start to server:", err)
 	}
