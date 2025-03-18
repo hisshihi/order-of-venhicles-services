@@ -234,6 +234,21 @@ type Payment struct {
 	UpdatedAt     time.Time         `json:"updated_at"`
 }
 
+type PendingSubscription struct {
+	ID               int64         `json:"id"`
+	PaymentID        int64         `json:"payment_id"`
+	UserID           int64         `json:"user_id"`
+	SubscriptionType string        `json:"subscription_type"`
+	StartDate        time.Time     `json:"start_date"`
+	EndDate          time.Time     `json:"end_date"`
+	OriginalPrice    string        `json:"original_price"`
+	FinalPrice       string        `json:"final_price"`
+	PromoCodeID      sql.NullInt64 `json:"promo_code_id"`
+	IsUpdate         bool          `json:"is_update"`
+	CreatedAt        time.Time     `json:"created_at"`
+	UpdatedAt        time.Time     `json:"updated_at"`
+}
+
 type PromoCode struct {
 	ID                 int64         `json:"id"`
 	PartnerID          int64         `json:"partner_id"`

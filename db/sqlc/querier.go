@@ -23,6 +23,7 @@ type Querier interface {
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
 	CreatePayment(ctx context.Context, arg CreatePaymentParams) (Payment, error)
+	CreatePendingSubscription(ctx context.Context, arg CreatePendingSubscriptionParams) (PendingSubscription, error)
 	CreatePromoCode(ctx context.Context, arg CreatePromoCodeParams) (PromoCode, error)
 	// Создает новый отзыв от клиента об услугодателе
 	CreateReview(ctx context.Context, arg CreateReviewParams) (Review, error)
@@ -32,6 +33,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteOrder(ctx context.Context, id int64) error
 	DeletePayment(ctx context.Context, id int64) error
+	DeletePendingSubscriptionByPaymentID(ctx context.Context, paymentID int64) error
 	DeletePromoCode(ctx context.Context, id int64) error
 	// Удаляет отзыв (только если пользователь является автором или администратором)
 	DeleteReview(ctx context.Context, arg DeleteReviewParams) error
@@ -52,6 +54,7 @@ type Querier interface {
 	// Получает список заказов по категории
 	GetOrdersByCategory(ctx context.Context, arg GetOrdersByCategoryParams) ([]GetOrdersByCategoryRow, error)
 	GetPaymentByID(ctx context.Context, id int64) (Payment, error)
+	GetPendingSubscriptionByPaymentID(ctx context.Context, paymentID int64) (PendingSubscription, error)
 	GetPromoCodeByCode(ctx context.Context, code string) (PromoCode, error)
 	GetPromoCodeByID(ctx context.Context, id int64) (PromoCode, error)
 	GetPromoCodeByPartnerID(ctx context.Context, partnerID int64) (PromoCode, error)
