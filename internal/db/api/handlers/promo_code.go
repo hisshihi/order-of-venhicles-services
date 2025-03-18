@@ -67,3 +67,5 @@ func (server *Server) updateCurrentUsagePromoCode(ctx *gin.Context, promoCodeID 
 
 	return nil
 }
+
+// TODO: реализовать получение всех провайдеров использующих промокод партнёра

@@ -132,9 +132,13 @@ func (server *Server) setupServer() {
 
 	// Маршруты, которые НЕ требуют подписки
 	// TODO: убрать конечные точки создание и обновление и реализовать эти методы только после оплаты(статус 200)
-	providerRoutes.POST("/subscriptions", server.createSubscription)
-	providerRoutes.POST("/subscriptions/update", server.updateSubscription)
-	providerRoutes.GET("/subscriptions/check", server.checkSubscriptionActive)
+	// providerRoutes.POST("/subscriptions", server.createSubscription)
+	// providerRoutes.POST("/subscriptions/update", server.updateSubscription)
+	// providerRoutes.GET("/subscriptions/check", server.checkSubscriptionActive)
+	// providerRoutes.POST("/payment", server.createPayment)
+	providerRoutes.POST("/payments/initiate", server.initiateSubscriptionPayment)
+	providerRoutes.POST("/payments/callback", server.processPaymentCallback)
+	providerRoutes.GET("/payments/:payment_id/status", server.checkPaymentStatus)
 
 	// Маршруты, которые требуют подписку
 	subscriptionRequiredRoutes := providerRoutes.Group("/")
