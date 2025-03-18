@@ -14,7 +14,7 @@ import (
 
 type createSubscriptionRequest struct {
 	SelectSubscription string `json:"select_subscription" binding:"required,oneof=14days month year"`
-	PromoCodeID        int64  `json:"promo_code_id"`
+	PromoCode          string `json:"promo_code"`
 }
 
 func (server *Server) createSubscription(ctx *gin.Context) {
@@ -75,11 +75,12 @@ func (server *Server) createSubscription(ctx *gin.Context) {
 	standardPriceString := fmt.Sprintf("%.2f", standardPrice)
 
 	// Обработка промокода, если он есть
-	if req.PromoCodeID > 0 {
-		promoCode, err := server.store.GetPromoCodeByID(ctx, req.PromoCodeID)
+	var promoCode sqlc.PromoCode
+	if req.PromoCode != "" {
+		promoCode, err = server.store.GetPromoCodeByCode(ctx, req.PromoCode)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				ctx.JSON(http.StatusBadRequest, errorResponse(err))
+				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("указанный промокод не существует")))
 				return
 			}
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -91,10 +92,20 @@ func (server *Server) createSubscription(ctx *gin.Context) {
 			return
 		}
 
+		if promoCode.CurrentUsages.Valid && promoCode.MaxUsages.Valid {
+			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("промокод уже использован максимальное количество раз")))
+			return
+		}
+
 		discountPercentage = int(promoCode.DiscountPercentage)
 		finalPrice = standardPrice * (1 - float64(discountPercentage)/100)
 		finalPriceString = fmt.Sprintf("%.2f", finalPrice) // Обновляем строковое представление
-		promoCodeID = sql.NullInt64{Int64: req.PromoCodeID, Valid: true}
+		promoCodeID = sql.NullInt64{Int64: promoCode.ID, Valid: true}
+		err := server.updateCurrentUsagePromoCode(ctx, promoCode.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(errors.New("ошибка при применении промокода, попробуйте позже")))
+			return
+		}
 	} else {
 		promoCodeID = sql.NullInt64{Valid: false}
 	}
@@ -133,7 +144,8 @@ func (server *Server) createSubscription(ctx *gin.Context) {
 	if discountPercentage > 0 {
 		rsp["discount_percentage"] = discountPercentage
 		rsp["discount_amount"] = standardPrice - finalPrice
-		rsp["promo_code_id"] = req.PromoCodeID
+		rsp["promo_code_id"] = promoCode.ID
+		
 	}
 
 	ctx.JSON(http.StatusOK, rsp)

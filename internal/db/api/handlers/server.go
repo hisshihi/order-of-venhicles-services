@@ -159,7 +159,7 @@ func (server *Server) setupServer() {
 		string(sqlc.RoleAdmin),
 	))
 	// Добавьте здесь маршруты для партнеров
-	// partnerRoutes.POST("/promo-codes", server.createPromoCode)
+	partnerRoutes.POST("/promo-codes", server.createPromoCode)
 	partnerRoutes.GET("/subscriptions/provider", server.listSubsciptionsByProviderID)
 
 	// Маршруты только для администраторов

@@ -1,11 +1,15 @@
 -- name: CreatePromoCode :one
-INSERT INTO promo_codes (partner_id, code, discount_percentage, valid_until)
-VALUES ($1, $2, $3, $4)
+INSERT INTO promo_codes (partner_id, code, discount_percentage, valid_until, max_usages, current_usages)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetPromoCodeByID :one
 SELECT * FROM promo_codes
 WHERE id = $1;
+
+-- name: GetPromoCodeByCode :one
+SELECT * FROM promo_codes
+WHERE code = $1;
 
 -- name: GetPromoCodeByPartnerID :one
 SELECT * FROM promo_codes
@@ -45,11 +49,10 @@ WHERE p.partner_id = $1
 ORDER BY s.status DESC
 LIMIT $2 OFFSET $3;
 
--- name: UpdatePromoCode :one
+-- name: UpdatePromoCodeByID :exec
 UPDATE promo_codes
-SET partner_id = $2, code = $3, discount_percentage = $4, valid_until = $5, updated_at = NOW()
-WHERE id = $1
-RETURNING *;
+SET current_usages = $2, updated_at = NOW()
+WHERE id = $1;
 
 -- name: DeletePromoCode :exec
 DELETE FROM promo_codes

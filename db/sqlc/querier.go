@@ -52,6 +52,7 @@ type Querier interface {
 	// Получает список заказов по категории
 	GetOrdersByCategory(ctx context.Context, arg GetOrdersByCategoryParams) ([]GetOrdersByCategoryRow, error)
 	GetPaymentByID(ctx context.Context, id int64) (Payment, error)
+	GetPromoCodeByCode(ctx context.Context, code string) (PromoCode, error)
 	GetPromoCodeByID(ctx context.Context, id int64) (PromoCode, error)
 	GetPromoCodeByPartnerID(ctx context.Context, partnerID int64) (PromoCode, error)
 	GetProvidersByPromoCode(ctx context.Context, arg GetProvidersByPromoCodeParams) ([]GetProvidersByPromoCodeRow, error)
@@ -99,7 +100,7 @@ type Querier interface {
 	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
 	UpdatePayment(ctx context.Context, arg UpdatePaymentParams) (Payment, error)
-	UpdatePromoCode(ctx context.Context, arg UpdatePromoCodeParams) (PromoCode, error)
+	UpdatePromoCodeByID(ctx context.Context, arg UpdatePromoCodeByIDParams) error
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
 	UpdateServiceCategory(ctx context.Context, arg UpdateServiceCategoryParams) (ServiceCategory, error)
 	UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error)

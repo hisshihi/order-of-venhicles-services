@@ -12,16 +12,18 @@ import (
 )
 
 const createPromoCode = `-- name: CreatePromoCode :one
-INSERT INTO promo_codes (partner_id, code, discount_percentage, valid_until)
-VALUES ($1, $2, $3, $4)
+INSERT INTO promo_codes (partner_id, code, discount_percentage, valid_until, max_usages, current_usages)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages
 `
 
 type CreatePromoCodeParams struct {
-	PartnerID          int64     `json:"partner_id"`
-	Code               string    `json:"code"`
-	DiscountPercentage int32     `json:"discount_percentage"`
-	ValidUntil         time.Time `json:"valid_until"`
+	PartnerID          int64         `json:"partner_id"`
+	Code               string        `json:"code"`
+	DiscountPercentage int32         `json:"discount_percentage"`
+	ValidUntil         time.Time     `json:"valid_until"`
+	MaxUsages          sql.NullInt32 `json:"max_usages"`
+	CurrentUsages      sql.NullInt32 `json:"current_usages"`
 }
 
 func (q *Queries) CreatePromoCode(ctx context.Context, arg CreatePromoCodeParams) (PromoCode, error) {
@@ -30,6 +32,8 @@ func (q *Queries) CreatePromoCode(ctx context.Context, arg CreatePromoCodeParams
 		arg.Code,
 		arg.DiscountPercentage,
 		arg.ValidUntil,
+		arg.MaxUsages,
+		arg.CurrentUsages,
 	)
 	var i PromoCode
 	err := row.Scan(
@@ -128,6 +132,28 @@ func (q *Queries) GetAllProvidersByPartnerPromos(ctx context.Context, arg GetAll
 		return nil, err
 	}
 	return items, nil
+}
+
+const getPromoCodeByCode = `-- name: GetPromoCodeByCode :one
+SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages FROM promo_codes
+WHERE code = $1
+`
+
+func (q *Queries) GetPromoCodeByCode(ctx context.Context, code string) (PromoCode, error) {
+	row := q.db.QueryRowContext(ctx, getPromoCodeByCode, code)
+	var i PromoCode
+	err := row.Scan(
+		&i.ID,
+		&i.PartnerID,
+		&i.Code,
+		&i.DiscountPercentage,
+		&i.ValidUntil,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MaxUsages,
+		&i.CurrentUsages,
+	)
+	return i, err
 }
 
 const getPromoCodeByID = `-- name: GetPromoCodeByID :one
@@ -341,40 +367,18 @@ func (q *Queries) ListPromoCodesByPartnerID(ctx context.Context, arg ListPromoCo
 	return items, nil
 }
 
-const updatePromoCode = `-- name: UpdatePromoCode :one
+const updatePromoCodeByID = `-- name: UpdatePromoCodeByID :exec
 UPDATE promo_codes
-SET partner_id = $2, code = $3, discount_percentage = $4, valid_until = $5, updated_at = NOW()
+SET current_usages = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages
 `
 
-type UpdatePromoCodeParams struct {
-	ID                 int64     `json:"id"`
-	PartnerID          int64     `json:"partner_id"`
-	Code               string    `json:"code"`
-	DiscountPercentage int32     `json:"discount_percentage"`
-	ValidUntil         time.Time `json:"valid_until"`
+type UpdatePromoCodeByIDParams struct {
+	ID            int64         `json:"id"`
+	CurrentUsages sql.NullInt32 `json:"current_usages"`
 }
 
-func (q *Queries) UpdatePromoCode(ctx context.Context, arg UpdatePromoCodeParams) (PromoCode, error) {
-	row := q.db.QueryRowContext(ctx, updatePromoCode,
-		arg.ID,
-		arg.PartnerID,
-		arg.Code,
-		arg.DiscountPercentage,
-		arg.ValidUntil,
-	)
-	var i PromoCode
-	err := row.Scan(
-		&i.ID,
-		&i.PartnerID,
-		&i.Code,
-		&i.DiscountPercentage,
-		&i.ValidUntil,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.MaxUsages,
-		&i.CurrentUsages,
-	)
-	return i, err
+func (q *Queries) UpdatePromoCodeByID(ctx context.Context, arg UpdatePromoCodeByIDParams) error {
+	_, err := q.db.ExecContext(ctx, updatePromoCodeByID, arg.ID, arg.CurrentUsages)
+	return err
 }
