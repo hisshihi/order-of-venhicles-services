@@ -139,6 +139,8 @@ func (server *Server) setupServer() {
 	providerRoutes.POST("/payments/initiate", server.initiateSubscriptionPayment)
 	providerRoutes.POST("/payments/callback", server.processPaymentCallback)
 	providerRoutes.GET("/payments/:payment_id/status", server.checkPaymentStatus)
+	// TODO: удалить после тестов
+	providerRoutes.POST("/payments/simulate", server.simuldateSuccessfulPayment)
 
 	// Маршруты, которые требуют подписку
 	subscriptionRequiredRoutes := providerRoutes.Group("/")

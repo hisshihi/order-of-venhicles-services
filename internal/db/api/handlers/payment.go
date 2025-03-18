@@ -18,7 +18,69 @@ type createPaymentRequest struct {
 	PaymentMethod      string `json:"payment_method" binding:"required"`
 	SelectSubscription string `json:"select_subscription" binding:"required,oneof=14days month year"`
 	PromoCode          string `json:"promo_code"`
-	Payment            string `json:"payment" binding:"required,oneof=byu_sub update_sub"`
+	Payment            string `json:"payment" binding:"required,oneof=buy_sub update_sub"`
+}
+
+// TODO: после тестов убрать
+// Тестовый эндпоинт для эмулции успешного платежа
+func (server *Server) simuldateSuccessfulPayment(ctx *gin.Context) {
+	var req struct {
+		PaymentID string `json:"payment_id" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// Получаем платёж по ID
+	paymentID, err := strconv.ParseInt(req.PaymentID, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	payment, err := server.store.GetPaymentByID(ctx, paymentID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// Обновляем статус платежа
+	updatePaymentArg := sqlc.UpdatePaymentStatusParams{
+		ID:     payment.ID,
+		Status: sqlc.NullStatusPayment{StatusPayment: sqlc.StatusPaymentCompleted, Valid: true},
+	}
+
+	_, err = server.store.UpdatePaymentStatus(ctx, updatePaymentArg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// Получаем сохранённые детали подписки
+	subscriptionDetails, err := server.getSubscriptionDetails(ctx, req.PaymentID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// Создаём или обновляем подписку
+	if subscriptionDetails.IsUpdate {
+		err = server.updateSubscriptionAfterPayment(ctx, payment.UserID, subscriptionDetails)
+	} else {
+		err = server.createSubscriptionAfterPayment(ctx, payment.UserID, subscriptionDetails)
+	}
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"status": "success", 
+		"message": "Симуляция успешного платежа выполнена",
+	})
 }
 
 // Шаг 1: Создание платежа и получение ссылки для оплаты
@@ -130,7 +192,7 @@ func (server *Server) processPaymentCallback(ctx *gin.Context) {
 			return
 		}
 
-		// Получаем сохранённые детали подписи
+		// Получаем сохранённые детали подписки
 		subscriptionDetails, err := server.getSubscriptionDetails(ctx, req.PaymentID)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
