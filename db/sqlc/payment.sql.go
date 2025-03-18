@@ -10,12 +10,13 @@ import (
 )
 
 const createPayment = `-- name: CreatePayment :one
-INSERT INTO payments (user_id, amount, payment_method, status)
-VALUES ($1, $2, $3, $4)
+INSERT INTO payments (id, user_id, amount, payment_method, status)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id, user_id, amount, payment_method, status, created_at, updated_at
 `
 
 type CreatePaymentParams struct {
+	ID            int64             `json:"id"`
 	UserID        int64             `json:"user_id"`
 	Amount        string            `json:"amount"`
 	PaymentMethod string            `json:"payment_method"`
@@ -24,6 +25,7 @@ type CreatePaymentParams struct {
 
 func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) (Payment, error) {
 	row := q.db.QueryRowContext(ctx, createPayment,
+		arg.ID,
 		arg.UserID,
 		arg.Amount,
 		arg.PaymentMethod,
@@ -137,6 +139,33 @@ func (q *Queries) UpdatePayment(ctx context.Context, arg UpdatePaymentParams) (P
 		arg.PaymentMethod,
 		arg.Status,
 	)
+	var i Payment
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Amount,
+		&i.PaymentMethod,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePaymentStatus = `-- name: UpdatePaymentStatus :one
+UPDATE payments
+SET status = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, user_id, amount, payment_method, status, created_at, updated_at
+`
+
+type UpdatePaymentStatusParams struct {
+	ID     int64             `json:"id"`
+	Status NullStatusPayment `json:"status"`
+}
+
+func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) (Payment, error) {
+	row := q.db.QueryRowContext(ctx, updatePaymentStatus, arg.ID, arg.Status)
 	var i Payment
 	err := row.Scan(
 		&i.ID,
