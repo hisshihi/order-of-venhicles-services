@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -55,6 +56,80 @@ func (q *Queries) DeletePromoCode(ctx context.Context, id int64) error {
 	return err
 }
 
+const getAllProvidersByPartnerPromos = `-- name: GetAllProvidersByPartnerPromos :many
+SELECT DISTINCT u.id, u.username, u.email, u.phone, u.city, s.id as subscription_id, 
+       s.start_date, s.end_date, s.status, s.subscription_type, 
+       s.price, s.original_price, p.code, p.discount_percentage
+FROM users u
+JOIN subscriptions s ON u.id = s.provider_id
+JOIN promo_codes p ON s.promo_code_id = p.id
+WHERE p.partner_id = $1
+ORDER BY s.status DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetAllProvidersByPartnerPromosParams struct {
+	PartnerID int64 `json:"partner_id"`
+	Limit     int64 `json:"limit"`
+	Offset    int64 `json:"offset"`
+}
+
+type GetAllProvidersByPartnerPromosRow struct {
+	ID                 int64                  `json:"id"`
+	Username           string                 `json:"username"`
+	Email              string                 `json:"email"`
+	Phone              string                 `json:"phone"`
+	City               sql.NullString         `json:"city"`
+	SubscriptionID     int64                  `json:"subscription_id"`
+	StartDate          time.Time              `json:"start_date"`
+	EndDate            time.Time              `json:"end_date"`
+	Status             NullStatusSubscription `json:"status"`
+	SubscriptionType   sql.NullString         `json:"subscription_type"`
+	Price              sql.NullString         `json:"price"`
+	OriginalPrice      sql.NullString         `json:"original_price"`
+	Code               string                 `json:"code"`
+	DiscountPercentage int32                  `json:"discount_percentage"`
+}
+
+// Получает всех поставщиков, которые использовали данный промокод
+func (q *Queries) GetAllProvidersByPartnerPromos(ctx context.Context, arg GetAllProvidersByPartnerPromosParams) ([]GetAllProvidersByPartnerPromosRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllProvidersByPartnerPromos, arg.PartnerID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetAllProvidersByPartnerPromosRow{}
+	for rows.Next() {
+		var i GetAllProvidersByPartnerPromosRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Phone,
+			&i.City,
+			&i.SubscriptionID,
+			&i.StartDate,
+			&i.EndDate,
+			&i.Status,
+			&i.SubscriptionType,
+			&i.Price,
+			&i.OriginalPrice,
+			&i.Code,
+			&i.DiscountPercentage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPromoCodeByID = `-- name: GetPromoCodeByID :one
 SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages FROM promo_codes
 WHERE id = $1
@@ -99,6 +174,83 @@ func (q *Queries) GetPromoCodeByPartnerID(ctx context.Context, partnerID int64) 
 	return i, err
 }
 
+const getProvidersByPromoCode = `-- name: GetProvidersByPromoCode :many
+SELECT DISTINCT u.id, u.username, u.email, u.phone, u.city, s.id as subscription_id, 
+       s.start_date, s.end_date, s.status, s.subscription_type, 
+       s.price, s.original_price, p.discount_percentage
+FROM users u
+JOIN subscriptions s ON u.id = s.provider_id
+JOIN promo_codes p ON s.promo_code_id = p.id
+WHERE p.partner_id = $1 AND p.id = $2
+ORDER BY s.status DESC
+LIMIT $3 OFFSET $4
+`
+
+type GetProvidersByPromoCodeParams struct {
+	PartnerID int64 `json:"partner_id"`
+	ID        int64 `json:"id"`
+	Limit     int64 `json:"limit"`
+	Offset    int64 `json:"offset"`
+}
+
+type GetProvidersByPromoCodeRow struct {
+	ID                 int64                  `json:"id"`
+	Username           string                 `json:"username"`
+	Email              string                 `json:"email"`
+	Phone              string                 `json:"phone"`
+	City               sql.NullString         `json:"city"`
+	SubscriptionID     int64                  `json:"subscription_id"`
+	StartDate          time.Time              `json:"start_date"`
+	EndDate            time.Time              `json:"end_date"`
+	Status             NullStatusSubscription `json:"status"`
+	SubscriptionType   sql.NullString         `json:"subscription_type"`
+	Price              sql.NullString         `json:"price"`
+	OriginalPrice      sql.NullString         `json:"original_price"`
+	DiscountPercentage int32                  `json:"discount_percentage"`
+}
+
+func (q *Queries) GetProvidersByPromoCode(ctx context.Context, arg GetProvidersByPromoCodeParams) ([]GetProvidersByPromoCodeRow, error) {
+	rows, err := q.db.QueryContext(ctx, getProvidersByPromoCode,
+		arg.PartnerID,
+		arg.ID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetProvidersByPromoCodeRow{}
+	for rows.Next() {
+		var i GetProvidersByPromoCodeRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Email,
+			&i.Phone,
+			&i.City,
+			&i.SubscriptionID,
+			&i.StartDate,
+			&i.EndDate,
+			&i.Status,
+			&i.SubscriptionType,
+			&i.Price,
+			&i.OriginalPrice,
+			&i.DiscountPercentage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPromoCodes = `-- name: ListPromoCodes :many
 SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages FROM promo_codes
 ORDER BY created_at DESC
@@ -112,6 +264,52 @@ type ListPromoCodesParams struct {
 
 func (q *Queries) ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error) {
 	rows, err := q.db.QueryContext(ctx, listPromoCodes, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PromoCode{}
+	for rows.Next() {
+		var i PromoCode
+		if err := rows.Scan(
+			&i.ID,
+			&i.PartnerID,
+			&i.Code,
+			&i.DiscountPercentage,
+			&i.ValidUntil,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.MaxUsages,
+			&i.CurrentUsages,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPromoCodesByPartnerID = `-- name: ListPromoCodesByPartnerID :many
+SELECT id, partner_id, code, discount_percentage, valid_until, created_at, updated_at, max_usages, current_usages FROM promo_codes
+WHERE partner_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListPromoCodesByPartnerIDParams struct {
+	PartnerID int64 `json:"partner_id"`
+	Limit     int64 `json:"limit"`
+	Offset    int64 `json:"offset"`
+}
+
+func (q *Queries) ListPromoCodesByPartnerID(ctx context.Context, arg ListPromoCodesByPartnerIDParams) ([]PromoCode, error) {
+	rows, err := q.db.QueryContext(ctx, listPromoCodesByPartnerID, arg.PartnerID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

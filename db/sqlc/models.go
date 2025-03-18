@@ -290,6 +290,7 @@ type Subscription struct {
 	SubscriptionType sql.NullString         `json:"subscription_type"`
 	Price            sql.NullString         `json:"price"`
 	PromoCodeID      sql.NullInt64          `json:"promo_code_id"`
+	OriginalPrice    sql.NullString         `json:"original_price"`
 }
 
 type User struct {

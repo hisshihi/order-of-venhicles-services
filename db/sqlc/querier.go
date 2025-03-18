@@ -40,6 +40,8 @@ type Querier interface {
 	DeleteSubscription(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
 	GetActiveSubscriptionForProvider(ctx context.Context, providerID int64) (Subscription, error)
+	// Получает всех поставщиков, которые использовали данный промокод
+	GetAllProvidersByPartnerPromos(ctx context.Context, arg GetAllProvidersByPartnerPromosParams) ([]GetAllProvidersByPartnerPromosRow, error)
 	// Получает среднюю оценку услугодателя
 	GetAverageRatingForProvider(ctx context.Context, providerID int64) (GetAverageRatingForProviderRow, error)
 	// Получает историю переписки между двумя пользователями
@@ -52,6 +54,7 @@ type Querier interface {
 	GetPaymentByID(ctx context.Context, id int64) (Payment, error)
 	GetPromoCodeByID(ctx context.Context, id int64) (PromoCode, error)
 	GetPromoCodeByPartnerID(ctx context.Context, partnerID int64) (PromoCode, error)
+	GetProvidersByPromoCode(ctx context.Context, arg GetProvidersByPromoCodeParams) ([]GetProvidersByPromoCodeRow, error)
 	// Получает конкретный отзыв по ID
 	GetReviewByID(ctx context.Context, id int64) (GetReviewByIDRow, error)
 	// Получает все отзывы об услугодателе
@@ -76,6 +79,7 @@ type Querier interface {
 	ListOrdersByClientID(ctx context.Context, arg ListOrdersByClientIDParams) ([]ListOrdersByClientIDRow, error)
 	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error)
+	ListPromoCodesByPartnerID(ctx context.Context, arg ListPromoCodesByPartnerIDParams) ([]PromoCode, error)
 	ListServiceCategories(ctx context.Context, arg ListServiceCategoriesParams) ([]ServiceCategory, error)
 	ListServices(ctx context.Context, arg ListServicesParams) ([]ListServicesRow, error)
 	ListServicesByCategory(ctx context.Context, arg ListServicesByCategoryParams) ([]ListServicesByCategoryRow, error)

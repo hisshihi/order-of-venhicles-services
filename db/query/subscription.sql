@@ -1,6 +1,6 @@
 -- name: CreateSubscription :one
-INSERT INTO subscriptions (provider_id, start_date, end_date, status)
-VALUES ($1, $2, $3, $4)
+INSERT INTO subscriptions (provider_id, start_date, subscription_type, promo_code_id, price, end_date, status, original_price)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING *;
 -- name: GetSubscriptionByID :one
 SELECT *
@@ -15,6 +15,12 @@ SELECT *
 FROM subscriptions
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
+-- name: ListSubscriptionsByProviderID :many
+SELECT *
+FROM subscriptions
+WHERE provider_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
 -- name: UpdateSubscription :one
 UPDATE subscriptions
 SET provider_id = $2,

@@ -17,7 +17,7 @@ SET status = 'expired',
     updated_at = NOW()
 WHERE status = 'active'
     AND end_date <= NOW()
-RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 `
 
 func (q *Queries) CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Subscription, error) {
@@ -40,6 +40,7 @@ func (q *Queries) CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Sub
 			&i.SubscriptionType,
 			&i.Price,
 			&i.PromoCodeID,
+			&i.OriginalPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -55,9 +56,9 @@ func (q *Queries) CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Sub
 }
 
 const createSubscription = `-- name: CreateSubscription :one
-INSERT INTO subscriptions (provider_id, start_date, subscription_type, promo_code_id, price, end_date, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+INSERT INTO subscriptions (provider_id, start_date, subscription_type, promo_code_id, price, end_date, status, original_price)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 `
 
 type CreateSubscriptionParams struct {
@@ -68,6 +69,7 @@ type CreateSubscriptionParams struct {
 	Price            sql.NullString         `json:"price"`
 	EndDate          time.Time              `json:"end_date"`
 	Status           NullStatusSubscription `json:"status"`
+	OriginalPrice    sql.NullString         `json:"original_price"`
 }
 
 func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error) {
@@ -79,6 +81,7 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 		arg.Price,
 		arg.EndDate,
 		arg.Status,
+		arg.OriginalPrice,
 	)
 	var i Subscription
 	err := row.Scan(
@@ -92,6 +95,7 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 		&i.SubscriptionType,
 		&i.Price,
 		&i.PromoCodeID,
+		&i.OriginalPrice,
 	)
 	return i, err
 }
@@ -107,7 +111,7 @@ func (q *Queries) DeleteSubscription(ctx context.Context, id int64) error {
 }
 
 const getActiveSubscriptionForProvider = `-- name: GetActiveSubscriptionForProvider :one
-SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 FROM subscriptions
 WHERE provider_id = $1
     AND status = 'active'
@@ -130,12 +134,13 @@ func (q *Queries) GetActiveSubscriptionForProvider(ctx context.Context, provider
 		&i.SubscriptionType,
 		&i.Price,
 		&i.PromoCodeID,
+		&i.OriginalPrice,
 	)
 	return i, err
 }
 
 const getSubscriptionByID = `-- name: GetSubscriptionByID :one
-SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 FROM subscriptions
 WHERE id = $1
 `
@@ -154,12 +159,13 @@ func (q *Queries) GetSubscriptionByID(ctx context.Context, id int64) (Subscripti
 		&i.SubscriptionType,
 		&i.Price,
 		&i.PromoCodeID,
+		&i.OriginalPrice,
 	)
 	return i, err
 }
 
 const getSubscriptionByProviderID = `-- name: GetSubscriptionByProviderID :one
-SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 FROM subscriptions
 WHERE provider_id = $1
 `
@@ -178,12 +184,13 @@ func (q *Queries) GetSubscriptionByProviderID(ctx context.Context, providerID in
 		&i.SubscriptionType,
 		&i.Price,
 		&i.PromoCodeID,
+		&i.OriginalPrice,
 	)
 	return i, err
 }
 
 const listSubscriptions = `-- name: ListSubscriptions :many
-SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 FROM subscriptions
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -214,6 +221,7 @@ func (q *Queries) ListSubscriptions(ctx context.Context, arg ListSubscriptionsPa
 			&i.SubscriptionType,
 			&i.Price,
 			&i.PromoCodeID,
+			&i.OriginalPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -229,7 +237,7 @@ func (q *Queries) ListSubscriptions(ctx context.Context, arg ListSubscriptionsPa
 }
 
 const listSubscriptionsByProviderID = `-- name: ListSubscriptionsByProviderID :many
-SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 FROM subscriptions
 WHERE provider_id = $1
 ORDER BY created_at DESC
@@ -262,6 +270,7 @@ func (q *Queries) ListSubscriptionsByProviderID(ctx context.Context, arg ListSub
 			&i.SubscriptionType,
 			&i.Price,
 			&i.PromoCodeID,
+			&i.OriginalPrice,
 		); err != nil {
 			return nil, err
 		}
@@ -284,7 +293,7 @@ SET provider_id = $2,
     status = $5,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 `
 
 type UpdateSubscriptionParams struct {
@@ -315,6 +324,7 @@ func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscription
 		&i.SubscriptionType,
 		&i.Price,
 		&i.PromoCodeID,
+		&i.OriginalPrice,
 	)
 	return i, err
 }
