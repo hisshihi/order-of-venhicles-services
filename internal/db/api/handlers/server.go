@@ -131,9 +131,10 @@ func (server *Server) setupServer() {
 	))
 
 	// Маршруты, которые НЕ требуют подписки
-	providerRoutes.POST("/subscription", server.createSubscription)
-	providerRoutes.POST("/subscription/update", server.updateSubsciption)
-	providerRoutes.GET("/subscription/check", server.checkSubscriptionActive)
+	// TODO: убрать конечные точки создание и обновление и реализовать эти методы только после оплаты(статус 200)
+	providerRoutes.POST("/subscriptions", server.createSubscription)
+	providerRoutes.POST("/subscriptions/update", server.updateSubsciption)
+	providerRoutes.GET("/subscriptions/check", server.checkSubscriptionActive)
 
 	// Маршруты, которые требуют подписку
 	subscriptionRequiredRoutes := providerRoutes.Group("/")
@@ -159,6 +160,7 @@ func (server *Server) setupServer() {
 	))
 	// Добавьте здесь маршруты для партнеров
 	// partnerRoutes.POST("/promo-codes", server.createPromoCode)
+	partnerRoutes.GET("/subscriptions/provider", server.listSubsciptionsByProviderID)
 
 	// Маршруты только для администраторов
 	adminRoutes := router.Group("/admin")

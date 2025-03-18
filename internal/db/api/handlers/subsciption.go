@@ -14,15 +14,7 @@ import (
 
 type createSubscriptionRequest struct {
 	SelectSubscription string `json:"select_subscription" binding:"required,oneof=14days month year"`
-}
-
-type subscriptionResponse struct {
-	ID         int64                       `json:"id"`
-	ProviderID int64                       `json:"provider_id"`
-	StartDate  time.Time                   `json:"start_date"`
-	EndDate    time.Time                   `json:"end_date"`
-	Status     sqlc.NullStatusSubscription `json:"status"`
-	CreatedAt  time.Time                   `json:"created_at"`
+	PromoCodeID        int64  `json:"promo_code_id"`
 }
 
 func (server *Server) createSubscription(ctx *gin.Context) {
@@ -54,22 +46,69 @@ func (server *Server) createSubscription(ctx *gin.Context) {
 	}
 
 	startDate := time.Now()
+	var subscriptionType string
 	var endDate time.Time
+	var standardPrice float64
+	var finalPrice float64
 
 	switch req.SelectSubscription {
 	case "14days":
 		endDate = startDate.AddDate(0, 0, 14)
+		subscriptionType = "14days"
+		standardPrice = 5000.0
 	case "month":
 		endDate = startDate.AddDate(0, 1, 0)
+		subscriptionType = "month"
+		standardPrice = 10000.0
 	case "year":
 		endDate = startDate.AddDate(1, 0, 0)
+		subscriptionType = "year"
+		standardPrice = 100000.0
+	}
+
+	finalPrice = standardPrice
+	var promoCodeID sql.NullInt64
+	var discountPercentage int
+
+	// Гарантированно инициализируем строковые представления цен
+	finalPriceString := fmt.Sprintf("%.2f", finalPrice) // Используем .2f для сохранения двух знаков после запятой
+	standardPriceString := fmt.Sprintf("%.2f", standardPrice)
+
+	// Обработка промокода, если он есть
+	if req.PromoCodeID > 0 {
+		promoCode, err := server.store.GetPromoCodeByID(ctx, req.PromoCodeID)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				ctx.JSON(http.StatusBadRequest, errorResponse(err))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+
+		if time.Now().After(promoCode.ValidUntil) {
+			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("действие промокода истекло")))
+			return
+		}
+
+		discountPercentage = int(promoCode.DiscountPercentage)
+		finalPrice = standardPrice * (1 - float64(discountPercentage)/100)
+		finalPriceString = fmt.Sprintf("%.2f", finalPrice) // Обновляем строковое представление
+		promoCodeID = sql.NullInt64{Int64: req.PromoCodeID, Valid: true}
+	} else {
+		promoCodeID = sql.NullInt64{Valid: false}
 	}
 
 	arg := sqlc.CreateSubscriptionParams{
-		ProviderID: user.ID,
-		StartDate:  startDate,
-		EndDate:    endDate,
-		Status:     sqlc.NullStatusSubscription{StatusSubscription: sqlc.StatusSubscriptionActive, Valid: true},
+		ProviderID:       user.ID,
+		StartDate:        startDate,
+		EndDate:          endDate,
+		Status:           sqlc.NullStatusSubscription{StatusSubscription: sqlc.StatusSubscriptionActive, Valid: true},
+		SubscriptionType: sql.NullString{String: subscriptionType, Valid: true},
+		PromoCodeID:      promoCodeID,
+		// Используем правильные форматированные строки для цен
+		Price:         sql.NullString{String: finalPriceString, Valid: true},
+		OriginalPrice: sql.NullString{String: standardPriceString, Valid: true},
 	}
 
 	subscription, err := server.store.CreateSubscription(ctx, arg)
@@ -78,13 +117,23 @@ func (server *Server) createSubscription(ctx *gin.Context) {
 		return
 	}
 
-	rsp := subscriptionResponse{
-		ID:         subscription.ID,
-		ProviderID: subscription.ProviderID,
-		StartDate:  subscription.StartDate,
-		EndDate:    subscription.EndDate,
-		Status:     subscription.Status,
-		CreatedAt:  subscription.CreatedAt,
+	// Формируем ответ с информацией о скидке
+	rsp := gin.H{
+		"id":                subscription.ID,
+		"provider_id":       subscription.ProviderID,
+		"start_date":        subscription.StartDate,
+		"end_date":          subscription.EndDate,
+		"subscription_type": subscriptionType,
+		"status":            subscription.Status,
+		"original_price":    standardPrice,
+		"final_price":       finalPrice,
+		"created_at":        subscription.CreatedAt,
+	}
+
+	if discountPercentage > 0 {
+		rsp["discount_percentage"] = discountPercentage
+		rsp["discount_amount"] = standardPrice - finalPrice
+		rsp["promo_code_id"] = req.PromoCodeID
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
@@ -215,6 +264,36 @@ func (server *Server) updateSubsciption(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
+}
+
+// Просмотр списка подписок
+
+type listSubsciptionsProviderIDRequest struct {
+	ProviderID int64 `form:"provider_id" binding:"min=1,required"`
+	PageID     int32 `form:"page_id" binding:"min=1,required"`
+	PageSize   int32 `form:"page_size" binding:"min=5,max=10,required"`
+}
+
+func (server *Server) listSubsciptionsByProviderID(ctx *gin.Context) {
+	var req listSubsciptionsProviderIDRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.ListSubscriptionsByProviderIDParams{
+		ProviderID: req.ProviderID,
+		Limit:      int64(req.PageSize),
+		Offset:     int64((req.PageID - 1) * req.PageSize),
+	}
+
+	subscriptions, err := server.store.ListSubscriptionsByProviderID(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, subscriptions)
 }
 
 // Запуск переодической проверки истекших подписок
