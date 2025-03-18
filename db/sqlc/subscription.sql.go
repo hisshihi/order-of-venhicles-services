@@ -291,17 +291,25 @@ SET provider_id = $2,
     start_date = $3,
     end_date = $4,
     status = $5,
+    subscription_type = $6,
+    price = $7,
+    original_price = $8,
+    promo_code_id = $9,
     updated_at = NOW()
 WHERE id = $1
 RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id, original_price
 `
 
 type UpdateSubscriptionParams struct {
-	ID         int64                  `json:"id"`
-	ProviderID int64                  `json:"provider_id"`
-	StartDate  time.Time              `json:"start_date"`
-	EndDate    time.Time              `json:"end_date"`
-	Status     NullStatusSubscription `json:"status"`
+	ID               int64                  `json:"id"`
+	ProviderID       int64                  `json:"provider_id"`
+	StartDate        time.Time              `json:"start_date"`
+	EndDate          time.Time              `json:"end_date"`
+	Status           NullStatusSubscription `json:"status"`
+	SubscriptionType sql.NullString         `json:"subscription_type"`
+	Price            sql.NullString         `json:"price"`
+	OriginalPrice    sql.NullString         `json:"original_price"`
+	PromoCodeID      sql.NullInt64          `json:"promo_code_id"`
 }
 
 func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error) {
@@ -311,6 +319,10 @@ func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscription
 		arg.StartDate,
 		arg.EndDate,
 		arg.Status,
+		arg.SubscriptionType,
+		arg.Price,
+		arg.OriginalPrice,
+		arg.PromoCodeID,
 	)
 	var i Subscription
 	err := row.Scan(

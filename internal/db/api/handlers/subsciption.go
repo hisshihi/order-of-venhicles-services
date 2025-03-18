@@ -145,7 +145,7 @@ func (server *Server) createSubscription(ctx *gin.Context) {
 		rsp["discount_percentage"] = discountPercentage
 		rsp["discount_amount"] = standardPrice - finalPrice
 		rsp["promo_code_id"] = promoCode.ID
-		
+
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
@@ -200,7 +200,7 @@ type subscriptionUpdateResponse struct {
 }
 
 // Обновление подписки
-func (server *Server) updateSubsciption(ctx *gin.Context) {
+func (server *Server) updateSubscription(ctx *gin.Context) {
 	var req createSubscriptionRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
@@ -219,7 +219,6 @@ func (server *Server) updateSubsciption(ctx *gin.Context) {
 
 	// Проверяем, нет ли уже активной подписки
 	activeSubscription, err := server.store.GetActiveSubscriptionForProvider(ctx, user.ID)
-	fmt.Println(activeSubscription)
 	if err != nil && err != sql.ErrNoRows {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -231,14 +230,66 @@ func (server *Server) updateSubsciption(ctx *gin.Context) {
 
 	startDate := time.Now()
 	var endDate time.Time
+	var standardPrice float64
+	var finalPrice float64
+	var subscriptionType string
 
 	switch req.SelectSubscription {
 	case "14days":
 		endDate = startDate.AddDate(0, 0, 14)
+		standardPrice = 5000.0
+		subscriptionType = "14days"
 	case "month":
 		endDate = startDate.AddDate(0, 1, 0)
+		standardPrice = 10000.0
+		subscriptionType = "month"
 	case "year":
 		endDate = startDate.AddDate(1, 0, 0)
+		standardPrice = 100000.0
+		subscriptionType = "year"
+	}
+
+	finalPrice = standardPrice
+	var promoCodeID sql.NullInt64
+	var discountPercentage int
+
+	// Обработка промокода, если он есть
+	var promoCode sqlc.PromoCode
+	if req.PromoCode != "" {
+		promoCode, err = server.store.GetPromoCodeByCode(ctx, req.PromoCode)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("указанный промокод не существует")))
+				return
+			}
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+
+		if time.Now().After(promoCode.ValidUntil) {
+			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("действие промокода истекло")))
+			return
+		}
+
+		if promoCode.CurrentUsages.Valid && promoCode.MaxUsages.Valid {
+			if promoCode.CurrentUsages.Int32 >= promoCode.MaxUsages.Int32 {
+				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("промокод уже использован максимальное количество раз")))
+				return
+			}
+		}
+
+		discountPercentage = int(promoCode.DiscountPercentage)
+		finalPrice = standardPrice * (1 - float64(discountPercentage)/100)
+		promoCodeID = sql.NullInt64{Int64: promoCode.ID, Valid: true}
+
+		// Обновляем количество использований промокода
+		err := server.updateCurrentUsagePromoCode(ctx, promoCode.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(errors.New("ошибка при применении промокода, попробуйте позже")))
+			return
+		}
+	} else {
+		promoCodeID = sql.NullInt64{Valid: false}
 	}
 
 	findSubscription, err := server.store.GetSubscriptionByProviderID(ctx, user.ID)
@@ -252,11 +303,15 @@ func (server *Server) updateSubsciption(ctx *gin.Context) {
 	}
 
 	arg := sqlc.UpdateSubscriptionParams{
-		ID:         findSubscription.ID,
-		ProviderID: user.ID,
-		StartDate:  startDate,
-		EndDate:    endDate,
-		Status:     sqlc.NullStatusSubscription{StatusSubscription: sqlc.StatusSubscriptionActive, Valid: true},
+		ID:            findSubscription.ID,
+		ProviderID:    user.ID,
+		StartDate:     startDate,
+		EndDate:       endDate,
+		Status:        sqlc.NullStatusSubscription{StatusSubscription: sqlc.StatusSubscriptionActive, Valid: true},
+		SubscriptionType: sql.NullString{String: subscriptionType, Valid: true},
+		PromoCodeID:   promoCodeID,
+		Price:         sql.NullString{String: fmt.Sprintf("%.2f", finalPrice), Valid: true},
+		OriginalPrice: sql.NullString{String: fmt.Sprintf("%.2f", standardPrice), Valid: true},
 	}
 
 	subscription, err := server.store.UpdateSubscription(ctx, arg)

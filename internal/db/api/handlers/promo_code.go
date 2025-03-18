@@ -32,7 +32,7 @@ func (server *Server) createPromoCode(ctx *gin.Context) {
 		DiscountPercentage: 14,
 		ValidUntil:         startDate.AddDate(0, 0, 2),
 		MaxUsages:          sql.NullInt32{Int32: 1, Valid: true},
-		CurrentUsages:      sql.NullInt32{Int32: 0, Valid: true},
+		CurrentUsages:      sql.NullInt32{Int32: 0, Valid: false},
 	}
 
 	promoCode, err := server.store.CreatePromoCode(ctx, arg)

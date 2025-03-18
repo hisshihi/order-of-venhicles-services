@@ -27,6 +27,10 @@ SET provider_id = $2,
     start_date = $3,
     end_date = $4,
     status = $5,
+    subscription_type = $6,
+    price = $7,
+    original_price = $8,
+    promo_code_id = $9,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
