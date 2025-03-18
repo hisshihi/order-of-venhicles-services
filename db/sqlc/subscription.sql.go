@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -54,22 +55,28 @@ func (q *Queries) CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Sub
 }
 
 const createSubscription = `-- name: CreateSubscription :one
-INSERT INTO subscriptions (provider_id, start_date, end_date, status)
-VALUES ($1, $2, $3, $4)
+INSERT INTO subscriptions (provider_id, start_date, subscription_type, promo_code_id, price, end_date, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
 `
 
 type CreateSubscriptionParams struct {
-	ProviderID int64                  `json:"provider_id"`
-	StartDate  time.Time              `json:"start_date"`
-	EndDate    time.Time              `json:"end_date"`
-	Status     NullStatusSubscription `json:"status"`
+	ProviderID       int64                  `json:"provider_id"`
+	StartDate        time.Time              `json:"start_date"`
+	SubscriptionType sql.NullString         `json:"subscription_type"`
+	PromoCodeID      sql.NullInt64          `json:"promo_code_id"`
+	Price            sql.NullString         `json:"price"`
+	EndDate          time.Time              `json:"end_date"`
+	Status           NullStatusSubscription `json:"status"`
 }
 
 func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error) {
 	row := q.db.QueryRowContext(ctx, createSubscription,
 		arg.ProviderID,
 		arg.StartDate,
+		arg.SubscriptionType,
+		arg.PromoCodeID,
+		arg.Price,
 		arg.EndDate,
 		arg.Status,
 	)
@@ -189,6 +196,54 @@ type ListSubscriptionsParams struct {
 
 func (q *Queries) ListSubscriptions(ctx context.Context, arg ListSubscriptionsParams) ([]Subscription, error) {
 	rows, err := q.db.QueryContext(ctx, listSubscriptions, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscription{}
+	for rows.Next() {
+		var i Subscription
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProviderID,
+			&i.StartDate,
+			&i.EndDate,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.SubscriptionType,
+			&i.Price,
+			&i.PromoCodeID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSubscriptionsByProviderID = `-- name: ListSubscriptionsByProviderID :many
+SELECT id, provider_id, start_date, end_date, status, created_at, updated_at, subscription_type, price, promo_code_id
+FROM subscriptions
+WHERE provider_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListSubscriptionsByProviderIDParams struct {
+	ProviderID int64 `json:"provider_id"`
+	Limit      int64 `json:"limit"`
+	Offset     int64 `json:"offset"`
+}
+
+func (q *Queries) ListSubscriptionsByProviderID(ctx context.Context, arg ListSubscriptionsByProviderIDParams) ([]Subscription, error) {
+	rows, err := q.db.QueryContext(ctx, listSubscriptionsByProviderID, arg.ProviderID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
