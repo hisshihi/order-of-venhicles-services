@@ -65,6 +65,7 @@ type Querier interface {
 	GetReviewsByProviderID(ctx context.Context, arg GetReviewsByProviderIDParams) ([]GetReviewsByProviderIDRow, error)
 	GetServiceByID(ctx context.Context, id int64) (GetServiceByIDRow, error)
 	GetServiceCategoryByID(ctx context.Context, id int64) (ServiceCategory, error)
+	GetServiceCategoryBySlug(ctx context.Context, slug string) (ServiceCategory, error)
 	GetServicesByProviderID(ctx context.Context, arg GetServicesByProviderIDParams) ([]GetServicesByProviderIDRow, error)
 	GetSubscriptionByID(ctx context.Context, id int64) (Subscription, error)
 	GetSubscriptionByProviderID(ctx context.Context, providerID int64) (Subscription, error)

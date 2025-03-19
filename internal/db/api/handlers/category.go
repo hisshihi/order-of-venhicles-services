@@ -13,7 +13,7 @@ type categoryRequest struct {
 	Name string `json:"name" binding:"required"`
 	Icon string `json:"icon" binding:"required"`
 	Description string `json:"description" binding:"required"`
-	Slug string `json:"slug" binding:"required,alphanum"`
+	Slug string `json:"slug" binding:"required"`
 }
 
 type categoryRespons struct {
@@ -163,4 +163,27 @@ func (server *Server) deleteCategory(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusNoContent, nil)
+}
+
+type getCategoryBySlugRequest struct {
+	Slug string `form:"slug" binding:"required"`
+}
+
+func (server *Server) getCategoryBySlug(ctx *gin.Context) {
+	var req getCategoryBySlugRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	category, err := server.store.GetServiceCategoryBySlug(ctx, req.Slug)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	}
+
+	ctx.JSON(http.StatusOK, category)
 }

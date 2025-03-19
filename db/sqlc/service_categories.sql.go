@@ -72,6 +72,26 @@ func (q *Queries) GetServiceCategoryByID(ctx context.Context, id int64) (Service
 	return i, err
 }
 
+const getServiceCategoryBySlug = `-- name: GetServiceCategoryBySlug :one
+SELECT id, name, icon, description, slug, created_at, updated_at FROM service_categories
+WHERE slug = $1
+`
+
+func (q *Queries) GetServiceCategoryBySlug(ctx context.Context, slug string) (ServiceCategory, error) {
+	row := q.db.QueryRowContext(ctx, getServiceCategoryBySlug, slug)
+	var i ServiceCategory
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Icon,
+		&i.Description,
+		&i.Slug,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listServiceCategories = `-- name: ListServiceCategories :many
 SELECT id, name, icon, description, slug, created_at, updated_at FROM service_categories
 ORDER BY name ASC

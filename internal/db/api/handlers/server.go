@@ -90,6 +90,8 @@ func (server *Server) setupServer() {
 	router.POST("/user/login", server.loginUser)
 	router.GET("/categories", server.listCategory)
 	router.GET("/categories/:id", server.getCategoryByID)
+	router.GET("/services/list/category", server.listServiceByCategoryID)
+	router.GET("/categories/slug", server.getCategoryBySlug)
 
 	// Защищённые маршруты с ролевым доступом
 	authRoutes := router.Group("/")
@@ -120,7 +122,6 @@ func (server *Server) setupServer() {
 	clientRoutes.GET("/services/:id", server.getServiceByID)
 	clientRoutes.GET("/services/list", server.listService)
 	clientRoutes.GET("/services/list/provider", server.listServiceByProviderID)
-	clientRoutes.GET("/services/list/category", server.listServiceByCategoryID)
 
 	// Маршруты для поставщиков услуг
 	providerRoutes := router.Group("/provider")

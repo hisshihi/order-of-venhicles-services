@@ -7,6 +7,10 @@ RETURNING *;
 SELECT * FROM service_categories
 WHERE id = $1;
 
+-- name: GetServiceCategoryBySlug :one
+SELECT * FROM service_categories
+WHERE slug = $1;
+
 -- name: ListServiceCategories :many
 SELECT * FROM service_categories
 ORDER BY name ASC;
