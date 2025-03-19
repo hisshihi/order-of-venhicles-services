@@ -73,7 +73,7 @@ func (server *Server) setupServer() {
 
 	// Настройка CORS
 	corsConfig := cors.Config{
-		AllowOrigins:     []string{"http://localhost:8081"},
+		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -88,6 +88,8 @@ func (server *Server) setupServer() {
 	// Публичные маршруты (без авторизации)
 	router.POST("/create-user", server.createUser)
 	router.POST("/user/login", server.loginUser)
+	router.GET("/categories", server.listCategory)
+	router.GET("/categories/:id", server.getCategoryByID)
 
 	// Защищённые маршруты с ролевым доступом
 	authRoutes := router.Group("/")
@@ -95,8 +97,6 @@ func (server *Server) setupServer() {
 
 	// Маршруты доступные всем авторизированным пользователям
 	authRoutes.GET("/users/me", server.getCurrentUser)
-	authRoutes.GET("/category/:id", server.getCategoryByID)
-	authRoutes.GET("/category", server.listCategory)
 
 	// Маршруты для клиентов
 	clientRoutes := router.Group("/client")

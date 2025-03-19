@@ -10,12 +10,18 @@ import (
 )
 
 type categoryRequest struct {
-	Name string `json:"name" binding:"required,min=6"`
+	Name string `json:"name" binding:"required"`
+	Icon string `json:"icon" binding:"required"`
+	Description string `json:"description" binding:"required"`
+	Slug string `json:"slug" binding:"required,alphanum"`
 }
 
 type categoryRespons struct {
 	ID int64 `json:"id"`
 	Name string `json:"name"`
+	Icon string `json:"icon"`
+	Description string `json:"description"`
+	Slug string `json:"slug"`
 }
 
 func (server *Server) createCategory(ctx *gin.Context) {
@@ -25,7 +31,14 @@ func (server *Server) createCategory(ctx *gin.Context) {
 		return
 	}
 
-	category, err := server.store.CreateServiceCategory(ctx, req.Name)
+	arg := sqlc.CreateServiceCategoryParams{
+		Name: req.Name,
+		Icon: req.Icon,
+		Description: req.Description,
+		Slug: req.Slug,
+	}
+
+	category, err := server.store.CreateServiceCategory(ctx, arg)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code.Name() {
@@ -76,18 +89,7 @@ type listCategoryRequest struct {
 }
 
 func (server *Server) listCategory(ctx *gin.Context) {
-	var req listCategoryRequest
-	if err := ctx.ShouldBindQuery(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
-
-	arg := sqlc.ListServiceCategoriesParams{
-		Limit: int64(req.PageSize),
-		Offset: int64((req.PageID - 1) * req.PageSize),
-	}
-
-	categories, err := server.store.ListServiceCategories(ctx, arg)
+	categories, err := server.store.ListServiceCategories(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -97,7 +99,10 @@ func (server *Server) listCategory(ctx *gin.Context) {
 }
 
 type updateCategoryRequest struct {
-	Name string `json:"name" binding:"required,min=5"`
+	Name string `json:"name" binding:"required"`
+	Icon string `json:"icon" binding:"required"`
+	Description string `json:"description" binding:"required"`
+	Slug string `json:"slug" binding:"required,alphanum"`
 }
 
 func (server *Server) updateCategory(ctx *gin.Context) {
@@ -126,6 +131,9 @@ func (server *Server) updateCategory(ctx *gin.Context) {
 	arg := sqlc.UpdateServiceCategoryParams{
 		ID: category.ID,
 		Name: req.Name,
+		Icon: req.Icon,
+		Description: req.Description,
+		Slug: req.Slug,
 	}
 
 	category, err = server.store.UpdateServiceCategory(ctx, arg)
