@@ -140,8 +140,16 @@ type loginUserRequest struct {
 	PasswordHash string `json:"password_hash" binding:"min=6"`
 }
 
+type userResponse struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
+}
+
 type loginUserResponse struct {
 	AccessToken string `json:"access_token"`
+	User        userResponse
 }
 
 func (server *Server) loginUser(ctx *gin.Context) {
@@ -177,7 +185,23 @@ func (server *Server) loginUser(ctx *gin.Context) {
 
 	rsp := loginUserResponse{
 		AccessToken: accessToken,
+		User: userResponse{
+			ID:       user.ID,
+			Username: user.Username,
+			Email:    user.Email,
+			Role:     string(user.Role.Role),
+		},
 	}
+
+	ctx.SetCookie(
+		"auth_token",
+		accessToken,
+		int(server.config.AccessTokenDuration.Seconds()),
+		"/",
+		"",
+		false, // TODO: поменять на true для продакшена
+		true,
+	)
 
 	ctx.JSON(http.StatusOK, rsp)
 }

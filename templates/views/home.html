@@ -1,0 +1,33 @@
+{{ define "home" }}
+<div class="jumbotron bg-light p-5 rounded">
+  <h1 class="display-4">Транспортные услуги на любой случай</h1>
+  <p class="lead">Аренда автомобилей, спецтехники и грузоперевозки от надежных партнеров.</p>
+  <hr class="my-4">
+
+  <div class="row mt-5">
+    <div class="col-12">
+      <h2 class="display-4 text-center">Наши услуги</h2>
+    </div>
+
+    <div class="row mt-4">
+      <div class="d-flex flex-wrap justify-content-evenly">
+        {{ if .Categories }} 
+          {{ range .Categories }}
+          <div class="card m-3">
+            <div class="category-card">
+              <div class="category-icon">{{ .Icon }}</div>
+              <h2>{{ .Name }}</h3>
+              <p>{{ .Description }}</p>
+              <a href="/categories/{{ .ID }}" class="btn btn-primary">Подробнее</a>
+            </div>
+          </div>
+          {{ end }} 
+        {{ else }}
+          <p class="text-center">Категории не найдены</p>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+{{ end }}
+
+{{ template "base" .}}

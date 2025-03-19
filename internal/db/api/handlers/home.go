@@ -10,8 +10,8 @@ import (
 func (server *Server) homePage(ctx *gin.Context) {
 	categories, err := server.store.ListServiceCategories(ctx)
 	if err != nil {
-		ctx.HTML(http.StatusInternalServerError, "base", gin.H{
-			"Title": "Главная страница",
+		ctx.HTML(http.StatusInternalServerError, "error", gin.H{
+			"Title": "Ошибка",
 			"Error": "Ошибка при получении категорий",
 		})
 		return

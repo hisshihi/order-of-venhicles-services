@@ -1,0 +1,82 @@
+{{ define "login" }} {{ template "header" .}}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card mt-5">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">Вход в систему</h4>
+      </div>
+      <div class="card-body">
+        <form id="loginForm">
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input
+              type="email"
+              class="form-control"
+              id="email"
+              name="email"
+              required
+            />
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Пароль</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password_hash"
+              name="password_hash"
+              required
+            />
+          </div>
+          <div id="loginError" class="alert alert-danger d-none">{{ template "auth_error" . }}</div>
+          <button type="submit" class="btn btn-primary">Войти</button>
+        </form>
+      </div>
+      <div class="card-footer">
+        <p class="mb-0">
+          Нет аккаунта? <a href="/register">Зарегистрироваться</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById("loginForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const email = document.getElementById("email").value;
+    const password_hash = document.getElementById("password_hash").value;
+    const errorDiv = document.getElementById("loginError");
+
+    axios
+      .post("/user/login", { email, password_hash })
+      .then(function (response) {
+        const data = response.data;
+        // Сохраняем токен
+        localStorage.setItem("auth_token", data.access_token);
+        // Устанавливаем куки с токеном для HTML-запросов
+        document.cookie = `auth_token=${data.access_token}; path=/; max-age=${
+          60 * 60 * 24 * 7
+        }`;
+        // Редирект на главную или предыдущую страницу
+        const redirectUrl =
+          new URLSearchParams(window.location.search).get("redirect") || "/";
+        window.location.href = redirectUrl;
+      })
+      .catch(function (error) {
+        let errorMessage = "Ошибка входа";
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.error
+        ) {
+          errorMessage = error.response.data.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        errorDiv.textContent = errorMessage;
+        errorDiv.classList.remove("d-none");
+      });
+  });
+</script>
+{{ template "footer" .}} {{ end }}

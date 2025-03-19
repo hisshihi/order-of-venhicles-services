@@ -72,6 +72,7 @@ func (server *Server) setupServer() {
 		"192.168.0.0/16", // локальные сети
 	})
 
+	// Установка функций для шаблонов
 	router.SetFuncMap(template.FuncMap{
 		"default": func(defaultValue, value any) any {
 			if value == nil {
@@ -82,8 +83,10 @@ func (server *Server) setupServer() {
 		"now": time.Now,
 	})
 
+	// Загружаем шаблоны
 	router.LoadHTMLGlob("templates/**/*")
 
+	// Статические файлы
 	router.Static("/static", "./static")
 
 	// Настройка CORS
@@ -100,7 +103,9 @@ func (server *Server) setupServer() {
 	// Применяем middleware для ограничения запросов
 	router.Use(rateLimiter)
 
+	// Страницы
 	router.GET("/", server.homePage)
+	router.GET("/login", server.loginPage)
 
 	// Публичные маршруты (без авторизации)
 	router.POST("/create-user", server.createUser)
@@ -111,8 +116,8 @@ func (server *Server) setupServer() {
 	router.GET("/categories/slug", server.getCategoryBySlug)
 
 	// Защищённые HTML-маршруты
-	htmlAuthRoutes := router.Group("/")
-	htmlAuthRoutes.Use(server.htmlAuthMiddleware())
+	// htmlAuthRoutes := router.Group("/")
+	// htmlAuthRoutes.Use(server.htmlAuthMiddleware())
 	// htmlAuthRoutes.GET("/", handlers ...gin.HandlerFunc)
 
 	// Защищённые маршруты с ролевым доступом
@@ -468,145 +473,145 @@ func (server *Server) updateExpiredSubscriptions(ctx *gin.Context) error {
 // -------------------
 // getUserDataFromTokenForHTML - версия getUserDataFromToken для HTML-страниц
 func (server *Server) getUserDataFromTokenForHTML(ctx *gin.Context) (sqlc.User, bool) {
-    // Получаем payload из токена авторизации
-    payload, exists := ctx.Get(authorizationPayloadKey)
-    if !exists {
-        // Для HTML-страниц просто возвращаем пустого пользователя и false
-        return sqlc.User{}, false
-    }
+	// Получаем payload из токена авторизации
+	payload, exists := ctx.Get(authorizationPayloadKey)
+	if !exists {
+		// Для HTML-страниц просто возвращаем пустого пользователя и false
+		return sqlc.User{}, false
+	}
 
-    // Приводим payload к нужному типу
-    tokenPayload, ok := payload.(*util.Payload)
-    if !ok {
-        return sqlc.User{}, false
-    }
+	// Приводим payload к нужному типу
+	tokenPayload, ok := payload.(*util.Payload)
+	if !ok {
+		return sqlc.User{}, false
+	}
 
-    // Получаем пользователя по ID из токена
-    user, err := server.store.GetUserByIDFromUser(ctx, tokenPayload.UserID)
-    if err != nil {
-        return sqlc.User{}, false
-    }
+	// Получаем пользователя по ID из токена
+	user, err := server.store.GetUserByIDFromUser(ctx, tokenPayload.UserID)
+	if err != nil {
+		return sqlc.User{}, false
+	}
 
-   return user, true
+	return user, true
 }
 
 // htmlAuthMiddleware - версия authMiddleware для HTML-страниц
 func (server *Server) htmlAuthMiddleware() gin.HandlerFunc {
-    return func(c *gin.Context) {
-        authorizationHeader := c.GetHeader(authorizationHeaderKey)
-        
-        // Проверяем наличие куки с токеном, если в заголовках его нет
-        if len(authorizationHeader) == 0 {
-            tokenCookie, err := c.Cookie("auth_token")
-            if err == nil {
-                authorizationHeader = "Bearer " + tokenCookie
-            }
-        }
-        
-        if len(authorizationHeader) == 0 {
-            // Для HTML-страниц перенаправляем на страницу входа
-            c.HTML(http.StatusUnauthorized, "base", gin.H{
-                "Title": "Требуется авторизация",
-                "Error": "Для доступа к этой странице необходимо войти в систему",
-                "RedirectToLogin": true,
-            })
-            c.Abort()
-            return
-        }
+	return func(c *gin.Context) {
+		authorizationHeader := c.GetHeader(authorizationHeaderKey)
 
-        fields := strings.Fields(authorizationHeader)
-        if len(fields) < 2 {
-            c.HTML(http.StatusUnauthorized, "base", gin.H{
-                "Title": "Ошибка аутентификации",
-                "Error": "Неверный формат заголовка авторизации",
-            })
-            c.Abort()
-            return
-        }
+		// Проверяем наличие куки с токеном, если в заголовках его нет
+		if len(authorizationHeader) == 0 {
+			tokenCookie, err := c.Cookie("auth_token")
+			if err == nil {
+				authorizationHeader = "Bearer " + tokenCookie
+			}
+		}
 
-        authorizationType := strings.ToLower(fields[0])
-        if authorizationType != authorizationTypeBearer {
-            c.HTML(http.StatusUnauthorized, "base", gin.H{
-                "Title": "Ошибка аутентификации",
-                "Error": fmt.Sprintf("Неподдерживаемый тип авторизации %s", authorizationType),
-            })
-            c.Abort()
-            return
-        }
+		if len(authorizationHeader) == 0 {
+			// Для HTML-страниц перенаправляем на страницу входа
+			c.HTML(http.StatusUnauthorized, "base", gin.H{
+				"Title":           "Требуется авторизация",
+				"Error":           "Для доступа к этой странице необходимо войти в систему",
+				"RedirectToLogin": true,
+			})
+			c.Abort()
+			return
+		}
 
-        accessToken := fields[1]
-        payload, err := server.maker.VerifyToken(accessToken)
-        if err != nil {
-            var errorMsg string
-            if errors.Is(err, util.ErrExpiredToken) {
-                errorMsg = "Срок действия токена истек, необходимо пройти авторизацию повторно"
-            } else if errors.Is(err, util.ErrInvalidToken) {
-                errorMsg = "Недействительный токен"
-            } else {
-                errorMsg = fmt.Sprintf("Ошибка проверки токена: %v", err)
-            }
-            c.HTML(http.StatusUnauthorized, "base", gin.H{
-                "Title": "Ошибка аутентификации",
-                "Error": errorMsg,
-            })
-            c.Abort()
-            return
-        }
+		fields := strings.Fields(authorizationHeader)
+		if len(fields) < 2 {
+			c.HTML(http.StatusUnauthorized, "base", gin.H{
+				"Title": "Ошибка аутентификации",
+				"Error": "Неверный формат заголовка авторизации",
+			})
+			c.Abort()
+			return
+		}
 
-        if err := payload.Valid(); err != nil {
-            c.HTML(http.StatusUnauthorized, "base", gin.H{
-                "Title": "Ошибка аутентификации",
-                "Error": "Срок действия токена истек, необходимо пройти авторизацию повторно",
-            })
-            c.Abort()
-            return
-        }
+		authorizationType := strings.ToLower(fields[0])
+		if authorizationType != authorizationTypeBearer {
+			c.HTML(http.StatusUnauthorized, "base", gin.H{
+				"Title": "Ошибка аутентификации",
+				"Error": fmt.Sprintf("Неподдерживаемый тип авторизации %s", authorizationType),
+			})
+			c.Abort()
+			return
+		}
 
-        c.Set(authorizationPayloadKey, payload)
-        c.Next()
-    }
+		accessToken := fields[1]
+		payload, err := server.maker.VerifyToken(accessToken)
+		if err != nil {
+			var errorMsg string
+			if errors.Is(err, util.ErrExpiredToken) {
+				errorMsg = "Срок действия токена истек, необходимо пройти авторизацию повторно"
+			} else if errors.Is(err, util.ErrInvalidToken) {
+				errorMsg = "Недействительный токен"
+			} else {
+				errorMsg = fmt.Sprintf("Ошибка проверки токена: %v", err)
+			}
+			c.HTML(http.StatusUnauthorized, "base", gin.H{
+				"Title": "Ошибка аутентификации",
+				"Error": errorMsg,
+			})
+			c.Abort()
+			return
+		}
+
+		if err := payload.Valid(); err != nil {
+			c.HTML(http.StatusUnauthorized, "base", gin.H{
+				"Title": "Ошибка аутентификации",
+				"Error": "Срок действия токена истек, необходимо пройти авторизацию повторно",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Set(authorizationPayloadKey, payload)
+		c.Next()
+	}
 }
 
 // htmlRoleCheckMiddleware - версия roleCheckMiddleware для HTML-страниц
 func (server *Server) htmlRoleCheckMiddleware(allowedRoles ...string) gin.HandlerFunc {
-    return func(c *gin.Context) {
-        payload, exists := c.Get(authorizationPayloadKey)
-        if !exists {
-            c.HTML(http.StatusUnauthorized, "base", gin.H{
-                "Title": "Требуется авторизация",
-                "Error": "Для доступа к этой странице необходимо войти в систему",
-            })
-            c.Abort()
-            return
-        }
+	return func(c *gin.Context) {
+		payload, exists := c.Get(authorizationPayloadKey)
+		if !exists {
+			c.HTML(http.StatusUnauthorized, "base", gin.H{
+				"Title": "Требуется авторизация",
+				"Error": "Для доступа к этой странице необходимо войти в систему",
+			})
+			c.Abort()
+			return
+		}
 
-        tokenPayload, ok := payload.(*util.Payload)
-        if !ok {
-            c.HTML(http.StatusInternalServerError, "base", gin.H{
-                "Title": "Ошибка сервера",
-                "Error": "Неверный тип данных аутентификации",
-            })
-            c.Abort()
-            return
-        }
+		tokenPayload, ok := payload.(*util.Payload)
+		if !ok {
+			c.HTML(http.StatusInternalServerError, "base", gin.H{
+				"Title": "Ошибка сервера",
+				"Error": "Неверный тип данных аутентификации",
+			})
+			c.Abort()
+			return
+		}
 
-        roleAllowed := false
-        for _, role := range allowedRoles {
-            if tokenPayload.Role == role {
-                roleAllowed = true
-                break
-            }
-        }
+		roleAllowed := false
+		for _, role := range allowedRoles {
+			if tokenPayload.Role == role {
+				roleAllowed = true
+				break
+			}
+		}
 
-        if !roleAllowed {
-            c.HTML(http.StatusForbidden, "base", gin.H{
-                "Title": "Доступ запрещен",
-                "Error": "У вас недостаточно прав для доступа к этой странице",
-            })
-            c.Abort()
-            return
-        }
+		if !roleAllowed {
+			c.HTML(http.StatusForbidden, "base", gin.H{
+				"Title": "Доступ запрещен",
+				"Error": "У вас недостаточно прав для доступа к этой странице",
+			})
+			c.Abort()
+			return
+		}
 
-        c.Next()
-    }
+		c.Next()
+	}
 }
