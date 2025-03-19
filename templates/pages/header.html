@@ -1,0 +1,59 @@
+{{ define "header" }}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <!-- Логотип -->
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <svg class="me-2" width="30" height="30" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M11.5 4a.5.5 0 0 1 .5.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-4 0 1 1 0 0 1-1-1v-1h11V4.5a.5.5 0 0 1 .5-.5zM3 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+            </svg>
+            <span>АвтоСервис</span>
+        </a>
+
+        <!-- Кнопка для мобильного меню -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Навигационное меню -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {{ if eq .ActivePage "home" }}active{{ end }}" href="/">
+                        Главная
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ if eq .ActivePage "categories" }}active{{ end }}" href="/categories">
+                        Категории
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Кнопки авторизации -->
+            <div class="d-flex">
+                {{ if .IsAuthenticated }}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            {{ .User.Username }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/profile">Профиль</a></li>
+                            {{ if eq .User.Role.Role "provider" }}
+                                <li><a class="dropdown-item" href="/provider/services">Мои услуги</a></li>
+                                <li><a class="dropdown-item" href="/provider/orders">Заказы</a></li>
+                            {{ else if eq .User.Role.Role "client" }}
+                                <li><a class="dropdown-item" href="/client/orders">Мои заказы</a></li>
+                            {{ end }}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="/logout">Выйти</a></li>
+                        </ul>
+                    </div>
+                {{ else }}
+                    <a href="/login" class="btn btn-outline-light me-2">Войти</a>
+                    <a href="/register" class="btn btn-primary">Регистрация</a>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+</nav>
+{{ end }}
