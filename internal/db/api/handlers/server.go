@@ -171,7 +171,7 @@ func (server *Server) setupServer() {
 	providerRoutes.POST("/payments/simulate", server.simuldateSuccessfulPayment)
 
 	// Маршруты, которые требуют подписку
-	subscriptionRequiredRoutes := providerRoutes.Group("/sub")
+	subscriptionRequiredRoutes := providerRoutes.Group("/")
 	subscriptionRequiredRoutes.Use(server.subscriptionCheckMiddleware())
 
 	subscriptionRequiredRoutes.POST("/services", server.createService)

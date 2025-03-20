@@ -14,7 +14,7 @@ import (
 type createServiceRequest struct {
 	CategoryID  int64  `json:"category_id" binding:"required"`
 	Title       string `json:"title" binding:"required,min=5"`
-	Description string `json:"description" binding:"required,min=50"`
+	Description string `json:"description" binding:"required"`
 	Price       string `json:"price" binding:"required"`
 	Country     string `json:"country" binding:"required"`
 	City        string `json:"city" binding:"required"`
