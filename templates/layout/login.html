@@ -27,7 +27,9 @@
               required
             />
           </div>
-          <div id="loginError" class="alert alert-danger d-none">{{ template "auth_error" . }}</div>
+          <div id="loginError" class="alert alert-danger d-none">
+            {{ template "auth_error" . }}
+          </div>
           <button type="submit" class="btn btn-primary">Войти</button>
         </form>
       </div>
@@ -52,16 +54,28 @@
       .post("/user/login", { email, password_hash })
       .then(function (response) {
         const data = response.data;
-        // Сохраняем токен
+        // Сохраняем токен и данные пользователя
         localStorage.setItem("auth_token", data.access_token);
+        localStorage.setItem("user_data", JSON.stringify(data.user));
+
         // Устанавливаем куки с токеном для HTML-запросов
         document.cookie = `auth_token=${data.access_token}; path=/; max-age=${
           60 * 60 * 24 * 7
         }`;
-        // Редирект на главную или предыдущую страницу
-        const redirectUrl =
-          new URLSearchParams(window.location.search).get("redirect") || "/";
-        window.location.href = redirectUrl;
+
+        // Показываем сообщение об успешном входе
+        const successMessage = document.createElement("div");
+        successMessage.className = "alert alert-success";
+        successMessage.textContent =
+          "Вход выполнен успешно! Перенаправление...";
+        errorDiv.parentNode.insertBefore(successMessage, errorDiv);
+
+        // Редирект на главную или предыдущую страницу через небольшую задержку
+        setTimeout(function () {
+          const redirectUrl =
+            new URLSearchParams(window.location.search).get("redirect") || "/";
+          window.location.href = redirectUrl;
+        }, 1000);
       })
       .catch(function (error) {
         let errorMessage = "Ошибка входа";

@@ -91,18 +91,11 @@ type listCategoryRequest struct {
 func (server *Server) listCategory(ctx *gin.Context) {
 	categories, err := server.store.ListServiceCategories(ctx)
 	if err != nil {
-		// ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		// return
-		ctx.HTML(http.StatusInternalServerError, "base", gin.H{
-			"Title": "Главная страница",
-			"Error": "Ошибка при получении категорий",
-		})
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
 	}
 
-	ctx.HTML(http.StatusOK, "base", gin.H{
-		"Title": "Главная страница",
-		"Categories": categories,
-	})
+	ctx.JSON(http.StatusOK, categories)
 }
 
 type updateCategoryRequest struct {

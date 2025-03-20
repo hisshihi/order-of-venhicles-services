@@ -206,6 +206,23 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, rsp)
 }
 
+// logoutUser обрабатывает запрос на выход из системы
+func (server *Server) logoutUser(ctx *gin.Context) {
+	// Удаляем cookie с токеном
+	ctx.SetCookie(
+		"auth_token",
+		"", // пустой токен
+		-1, // отрицательное время жизни для удаления
+		"/",
+		"",
+		false,
+		true,
+	)
+
+	// Возвращаем успешный ответ
+	ctx.JSON(http.StatusOK, gin.H{"success": true, "message": "Выход выполнен успешно"})
+}
+
 type getCurrentUserResponse struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`

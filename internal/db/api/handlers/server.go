@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -73,21 +72,21 @@ func (server *Server) setupServer() {
 	})
 
 	// Установка функций для шаблонов
-	router.SetFuncMap(template.FuncMap{
-		"default": func(defaultValue, value any) any {
-			if value == nil {
-				return defaultValue
-			}
-			return value
-		},
-		"now": time.Now,
-	})
+	// router.SetFuncMap(template.FuncMap{
+	// 	"default": func(defaultValue, value any) any {
+	// 		if value == nil {
+	// 			return defaultValue
+	// 		}
+	// 		return value
+	// 	},
+	// 	"now": time.Now,
+	// })
 
 	// Загружаем шаблоны
-	router.LoadHTMLGlob("templates/**/*")
+	// router.LoadHTMLGlob("templates/**/*")
 
-	// Статические файлы
-	router.Static("/static", "./static")
+	// // Статические файлы
+	// router.Static("/static", "./static")
 
 	// Настройка CORS
 	corsConfig := cors.Config{
@@ -104,13 +103,14 @@ func (server *Server) setupServer() {
 	router.Use(rateLimiter)
 
 	// Страницы
-	router.GET("/", server.homePage)
-	router.GET("/login", server.loginPage)
+	// router.GET("/", server.homePage)
+	// router.GET("/login", server.loginPage)
 
 	// Публичные маршруты (без авторизации)
 	router.POST("/create-user", server.createUser)
 	router.POST("/user/login", server.loginUser)
-	// router.GET("/categories", server.listCategory)
+	router.POST("/user/logout", server.logoutUser)
+	router.GET("/categories", server.listCategory)
 	router.GET("/categories/:id", server.getCategoryByID)
 	router.GET("/services/list/category", server.listServiceByCategoryID)
 	router.GET("/categories/slug", server.getCategoryBySlug)
