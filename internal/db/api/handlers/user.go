@@ -231,6 +231,7 @@ type getCurrentUserResponse struct {
 	District string `json:"district,omitempty"`
 	Phone    string `json:"phone"`
 	Whatsapp string `json:"whatsapp"`
+	Role     string `json:"role"`
 }
 
 func (server *Server) getCurrentUser(ctx *gin.Context) {
@@ -248,6 +249,7 @@ func (server *Server) getCurrentUser(ctx *gin.Context) {
 		District: user.District.String,
 		Phone:    user.Phone,
 		Whatsapp: user.Whatsapp,
+		Role: string(user.Role.Role),
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
