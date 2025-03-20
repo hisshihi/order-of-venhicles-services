@@ -162,7 +162,7 @@ func (server *Server) setupServer() {
 	// TODO: убрать конечные точки создание и обновление и реализовать эти методы только после оплаты(статус 200)
 	// providerRoutes.POST("/subscriptions", server.createSubscription)
 	// providerRoutes.POST("/subscriptions/update", server.updateSubscription)
-	// providerRoutes.GET("/subscriptions/check", server.checkSubscriptionActive)
+	providerRoutes.GET("/subscriptions/check", server.checkSubscriptionActive)
 	// providerRoutes.POST("/payment", server.createPayment)
 	providerRoutes.POST("/payments/initiate", server.initiateSubscriptionPayment)
 	providerRoutes.POST("/payments/callback", server.processPaymentCallback)
@@ -171,7 +171,7 @@ func (server *Server) setupServer() {
 	providerRoutes.POST("/payments/simulate", server.simuldateSuccessfulPayment)
 
 	// Маршруты, которые требуют подписку
-	subscriptionRequiredRoutes := providerRoutes.Group("/")
+	subscriptionRequiredRoutes := providerRoutes.Group("/sub")
 	subscriptionRequiredRoutes.Use(server.subscriptionCheckMiddleware())
 
 	subscriptionRequiredRoutes.POST("/services", server.createService)
@@ -439,7 +439,7 @@ func (server *Server) getUserDataFromToken(ctx *gin.Context) (sqlc.User, error) 
 	user, err := server.store.GetUserByIDFromUser(ctx, tokenPayload.UserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			ctx.JSON(http.StatusNotFound, errorResponse(errors.New("пользователь не найден")))
 			return sqlc.User{}, err
 		}
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))

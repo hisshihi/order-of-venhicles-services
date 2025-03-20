@@ -362,12 +362,10 @@ func (server *Server) calculateSubscriptionDetails(ctx *gin.Context, userID int6
 		details.IsUpdate = true
 	}
 	if err != nil && err != sql.ErrNoRows {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return details, err
 	}
 	if err == nil && subscription.Status.StatusSubscription == sqlc.StatusSubscriptionActive {
-		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("у вас уже есть активная подписка")))
-		return details, err
+		return details, errors.New("у вас уже есть активная подписка")
 	}
 
 	// Обработка промокода, если он указан
@@ -377,7 +375,7 @@ func (server *Server) calculateSubscriptionDetails(ctx *gin.Context, userID int6
 			if err == sql.ErrNoRows {
 				return details, errors.New("указанный промокод не существует")
 			}
-			return details, err
+			return details, errors.New("указанный промокод не существует")
 		}
 
 		if time.Now().After(promoCodeObj.ValidUntil) {
