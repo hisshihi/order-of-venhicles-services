@@ -126,3 +126,7 @@ FROM "services" s
     JOIN "service_categories" sc ON s.category_id = sc.id
 WHERE s.provider_id = $1
     AND s.category_id = $2;
+
+-- name: CountServicesByProviderID :one
+SELECT COUNT(*) FROM "services"
+WHERE provider_id = $1;

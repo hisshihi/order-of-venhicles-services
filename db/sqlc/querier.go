@@ -19,6 +19,7 @@ type Querier interface {
 	CheckIfClientReviewedOrder(ctx context.Context, arg CheckIfClientReviewedOrderParams) (bool, error)
 	// Проверяет, добавлен ли услугодатель в избранное клиента
 	CheckIfProviderIsFavorite(ctx context.Context, arg CheckIfProviderIsFavoriteParams) (bool, error)
+	CountServicesByProviderID(ctx context.Context, providerID int64) (int64, error)
 	// Создает новое сообщение
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)

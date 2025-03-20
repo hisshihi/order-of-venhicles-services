@@ -38,6 +38,11 @@ type createServiceResponse struct {
 	CategoryName     string  `json:"category_name"`
 	ReviewsCount     int64   `json:"reviews_count"`
 	AverageRating    float64 `json:"average_rating"`
+	ServiceCount serviceCountResponse `json:"service_count"`
+}
+
+type serviceCountResponse struct {
+	ServiceCount     int     `json:"service_count"`
 }
 
 func (server *Server) createService(ctx *gin.Context) {
@@ -108,6 +113,16 @@ func (server *Server) getServiceByProviderID(ctx *gin.Context) {
 		return
 	}
 
+	sizeService, err := server.store.CountServicesByProviderID(ctx, user.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	serviceCount := serviceCountResponse{
+		ServiceCount: int(sizeService),
+	}
+
 	rsp := createServiceResponse{
 		ID:          service.ID,
 		ProviderID:  service.ProviderID,
@@ -115,6 +130,7 @@ func (server *Server) getServiceByProviderID(ctx *gin.Context) {
 		Title:       service.Title,
 		Description: service.Description,
 		Price:       service.Price,
+		ServiceCount: serviceCount,
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
@@ -172,9 +188,14 @@ func (server *Server) listServiceByProviderID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, services)
 }
 
+type listServiceFromProviderResponse struct {
+	Services []sqlc.GetServicesByProviderIDRow `json:"services"`
+	CountService int `json:"count_service"`
+}
+
 type listServicesFromProviderRequest struct {
 	PageID   int32 `form:"page_id" binding:"min=1,required"`
-	PageSize int32 `form:"page_size" binding:"min=5,max=10,required"`
+	PageSize int32 `form:"page_size" binding:"min=1,max=10,required"`
 }
 
 func (server *Server) listServiceFromProvider(ctx *gin.Context) {
@@ -206,7 +227,18 @@ func (server *Server) listServiceFromProvider(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, services)
+	sizeService, err := server.store.CountServicesByProviderID(ctx, user.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	rsp := listServiceFromProviderResponse{
+		Services: services,
+		CountService: int(sizeService),
+	}
+
+	ctx.JSON(http.StatusOK, rsp)
 }
 
 type listServicesByCategoryIDRequest struct {
