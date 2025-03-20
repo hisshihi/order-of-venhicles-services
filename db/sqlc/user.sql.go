@@ -20,7 +20,8 @@ INSERT INTO users (
         city,
         district,
         phone,
-        whatsapp
+        whatsapp,
+        photo_url
     )
 VALUES (
         $1,
@@ -31,7 +32,8 @@ VALUES (
         $6,
         $7,
         $8,
-        $9
+        $9,
+        $10
     )
 RETURNING id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
 `
@@ -46,6 +48,7 @@ type CreateUserParams struct {
 	District     sql.NullString `json:"district"`
 	Phone        string         `json:"phone"`
 	Whatsapp     string         `json:"whatsapp"`
+	PhotoUrl     []byte         `json:"photo_url"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -59,6 +62,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.District,
 		arg.Phone,
 		arg.Whatsapp,
+		arg.PhotoUrl,
 	)
 	var i User
 	err := row.Scan(

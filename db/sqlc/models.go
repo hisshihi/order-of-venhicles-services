@@ -325,7 +325,7 @@ type User struct {
 	Whatsapp         string         `json:"whatsapp"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
-	PhotoUrl         sql.NullString `json:"photo_url"`
+	PhotoUrl         []byte         `json:"photo_url"`
 	Description      sql.NullString `json:"description"`
 	IsVerified       sql.NullBool   `json:"is_verified"`
 	IsBlocked        sql.NullBool   `json:"is_blocked"`

@@ -93,7 +93,7 @@ type ListFavoriteProvidersRow struct {
 	ID                  int64          `json:"id"`
 	ProviderID          int64          `json:"provider_id"`
 	ProviderName        string         `json:"provider_name"`
-	ProviderPhoto       sql.NullString `json:"provider_photo"`
+	ProviderPhoto       []byte         `json:"provider_photo"`
 	ProviderPhone       string         `json:"provider_phone"`
 	ProviderWhatsapp    string         `json:"provider_whatsapp"`
 	ProviderDescription sql.NullString `json:"provider_description"`

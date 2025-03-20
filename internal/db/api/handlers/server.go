@@ -140,7 +140,7 @@ func (server *Server) setupServer() {
 	clientRoutes.POST("/orders", server.createOrder)
 	clientRoutes.GET("/orders/:id", server.getOrderByID)
 	clientRoutes.POST("/orders/:id/status", server.updateOrderStatus)
-	clientRoutes.GET("/orders/", server.listOrders)
+	clientRoutes.GET("/orders", server.listOrders)
 	clientRoutes.POST("/reviews", server.createReview)
 	clientRoutes.GET("/reviews", server.listReviewByProviderID)
 	clientRoutes.GET("/reviews/:id/rating", server.getAverageRatingForProvider)

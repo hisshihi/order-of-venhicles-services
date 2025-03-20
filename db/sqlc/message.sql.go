@@ -174,13 +174,13 @@ type GetUserRecentChatsParams struct {
 }
 
 type GetUserRecentChatsRow struct {
-	MessageID      int64          `json:"message_id"`
-	OtherUserID    sql.NullInt64  `json:"other_user_id"`
-	OtherUserName  string         `json:"other_user_name"`
-	OtherUserPhoto sql.NullString `json:"other_user_photo"`
-	LastMessage    string         `json:"last_message"`
-	MessageTime    time.Time      `json:"message_time"`
-	UnreadCount    int64          `json:"unread_count"`
+	MessageID      int64         `json:"message_id"`
+	OtherUserID    sql.NullInt64 `json:"other_user_id"`
+	OtherUserName  string        `json:"other_user_name"`
+	OtherUserPhoto []byte        `json:"other_user_photo"`
+	LastMessage    string        `json:"last_message"`
+	MessageTime    time.Time     `json:"message_time"`
+	UnreadCount    int64         `json:"unread_count"`
 }
 
 // Получает список недавних чатов пользователя

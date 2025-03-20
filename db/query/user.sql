@@ -8,7 +8,8 @@ INSERT INTO users (
         city,
         district,
         phone,
-        whatsapp
+        whatsapp,
+        photo_url
     )
 VALUES (
         $1,
@@ -19,7 +20,8 @@ VALUES (
         $6,
         $7,
         $8,
-        $9
+        $9,
+        $10
     )
 RETURNING *;
 

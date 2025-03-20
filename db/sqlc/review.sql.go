@@ -181,13 +181,13 @@ type GetReviewsByProviderIDParams struct {
 }
 
 type GetReviewsByProviderIDRow struct {
-	ID          int64          `json:"id"`
-	ClientID    int64          `json:"client_id"`
-	ClientName  string         `json:"client_name"`
-	ClientPhoto sql.NullString `json:"client_photo"`
-	Rating      int32          `json:"rating"`
-	Comment     string         `json:"comment"`
-	CreatedAt   time.Time      `json:"created_at"`
+	ID          int64     `json:"id"`
+	ClientID    int64     `json:"client_id"`
+	ClientName  string    `json:"client_name"`
+	ClientPhoto []byte    `json:"client_photo"`
+	Rating      int32     `json:"rating"`
+	Comment     string    `json:"comment"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 // Получает все отзывы об услугодателе

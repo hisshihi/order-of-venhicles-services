@@ -2,7 +2,10 @@ package api
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -12,16 +15,17 @@ import (
 	"github.com/lib/pq"
 )
 
-type createUserParams struct {
-	Username     string  `json:"username" binding:"required"`
-	Email        string  `json:"email" binding:"required,email"`
-	PasswordHash string  `json:"password_hash" binding:"min=6"`
-	Country      *string `json:"country,omitempty"`
-	City         *string `json:"city,omitempty"`
-	District     *string `json:"district,omitempty"`
-	Phone        string  `json:"phone" binding:"required"`
-	Whatsapp     string  `json:"whatsapp" binding:"required"`
-	Role         *string `json:"role,omitempty"`
+type createUserRequest struct {
+	Username     string                `form:"username" binding:"required"`
+	Email        string                `form:"email" binding:"required,email"`
+	PasswordHash string                `form:"password_hash" binding:"min=6"`
+	Country      *string               `form:"country,omitempty"`
+	City         *string               `form:"city,omitempty"`
+	District     *string               `form:"district,omitempty"`
+	Phone        string                `form:"phone" binding:"required"`
+	Whatsapp     string                `form:"whatsapp" binding:"required"`
+	Role         *string               `form:"role,omitempty"`
+	PhotoUrl     *multipart.FileHeader `form:"photo_url"`
 }
 
 type User struct {
@@ -32,6 +36,8 @@ type User struct {
 	District *string `json:"district"`
 	Phone    string  `json:"phone"`
 	Whatsapp string  `json:"whatsapp"`
+	PhotoUrl string  `json:"photo_url,omitempty"`
+	PhotoMime string  `json:"photo_mime,omitempty"`
 }
 
 type createUserResponse struct {
@@ -40,8 +46,10 @@ type createUserResponse struct {
 }
 
 func (server *Server) createUser(ctx *gin.Context) {
-	var req createUserParams
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, 1<<20+1024)
+
+	var req createUserRequest
+	if err := ctx.ShouldBind(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
@@ -59,6 +67,39 @@ func (server *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
+	var photoBytes []byte
+	if req.PhotoUrl != nil {
+		if req.PhotoUrl.Size > 1<<29 {
+			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 1МБ")))
+			return
+		}
+
+		file, err := req.PhotoUrl.Open()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		defer file.Close()
+
+		// Считываем весь файл сразу
+		photoBytes, err = io.ReadAll(file)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+
+		// Проверка типа контента (опционально)
+		contentType := http.DetectContentType(photoBytes)
+		allowedTypes := map[string]bool{
+			"image/jpeg": true,
+			"image/png":  true,
+		}
+		if !allowedTypes[contentType] {
+			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("неподдерживаемый тип файла")))
+			return
+		}
+	}
+
 	// Подготовка параметров с обработкой необязательных полей
 	arg := sqlc.CreateUserParams{
 		Username:     req.Username,
@@ -67,7 +108,11 @@ func (server *Server) createUser(ctx *gin.Context) {
 		Phone:        req.Phone,
 		Whatsapp:     req.Whatsapp,
 		// По умолчанию все пользователи создаются как клиенты
-		Role: sqlc.NullRole{Role: sqlc.RoleClient, Valid: true},
+		Role:     sqlc.NullRole{Role: sqlc.RoleClient, Valid: true},
+		Country:  sql.NullString{String: *req.Country, Valid: true},
+		City:     sql.NullString{String: *req.City, Valid: true},
+		District: sql.NullString{String: *req.District, Valid: true},
+		PhotoUrl: photoBytes,
 	}
 
 	// Обработка необязательных полей
@@ -119,6 +164,8 @@ func (server *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
+	contentType := http.DetectContentType(photoBytes)
+
 	rsp := createUserResponse{
 		User: User{
 			Username: user.Username,
@@ -128,6 +175,8 @@ func (server *Server) createUser(ctx *gin.Context) {
 			District: &user.District.String,
 			Phone:    user.Phone,
 			Whatsapp: user.Whatsapp,
+			PhotoUrl: base64.StdEncoding.EncodeToString(user.PhotoUrl),
+			PhotoMime: contentType,
 		},
 		AccessToken: accessToken,
 	}
@@ -232,6 +281,7 @@ type getCurrentUserResponse struct {
 	Phone    string `json:"phone"`
 	Whatsapp string `json:"whatsapp"`
 	Role     string `json:"role"`
+	PhotoUrl string  `json:"photo_url,omitempty"`
 }
 
 func (server *Server) getCurrentUser(ctx *gin.Context) {
@@ -249,7 +299,8 @@ func (server *Server) getCurrentUser(ctx *gin.Context) {
 		District: user.District.String,
 		Phone:    user.Phone,
 		Whatsapp: user.Whatsapp,
-		Role: string(user.Role.Role),
+		Role:     string(user.Role.Role),
+		PhotoUrl: base64.StdEncoding.EncodeToString(user.PhotoUrl),
 	}
 
 	ctx.JSON(http.StatusOK, rsp)

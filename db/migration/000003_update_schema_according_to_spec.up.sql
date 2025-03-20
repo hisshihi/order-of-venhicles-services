@@ -1,6 +1,6 @@
 -- 1. Добавление полей в таблицу users для более детального профиля
 ALTER TABLE "users"
-ADD COLUMN IF NOT EXISTS "photo_url" varchar;
+ADD COLUMN IF NOT EXISTS "photo_url" bytea;
 ALTER TABLE "users"
 ADD COLUMN IF NOT EXISTS "description" text;
 ALTER TABLE "users"

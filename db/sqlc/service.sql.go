@@ -122,7 +122,7 @@ type GetServiceByIDRow struct {
 	City             sql.NullString `json:"city"`
 	District         sql.NullString `json:"district"`
 	ProviderName     string         `json:"provider_name"`
-	ProviderPhoto    sql.NullString `json:"provider_photo"`
+	ProviderPhoto    []byte         `json:"provider_photo"`
 	ProviderPhone    string         `json:"provider_phone"`
 	ProviderWhatsapp string         `json:"provider_whatsapp"`
 	CategoryName     string         `json:"category_name"`
@@ -257,7 +257,7 @@ type ListServicesRow struct {
 	City          sql.NullString `json:"city"`
 	District      sql.NullString `json:"district"`
 	ProviderName  string         `json:"provider_name"`
-	ProviderPhoto sql.NullString `json:"provider_photo"`
+	ProviderPhoto []byte         `json:"provider_photo"`
 	CategoryName  string         `json:"category_name"`
 }
 
@@ -333,7 +333,7 @@ type ListServicesByCategoryRow struct {
 	City          sql.NullString `json:"city"`
 	District      sql.NullString `json:"district"`
 	ProviderName  string         `json:"provider_name"`
-	ProviderPhoto sql.NullString `json:"provider_photo"`
+	ProviderPhoto []byte         `json:"provider_photo"`
 	CategoryName  string         `json:"category_name"`
 }
 
@@ -422,7 +422,7 @@ type ListServicesByLocationRow struct {
 	City          sql.NullString `json:"city"`
 	District      sql.NullString `json:"district"`
 	ProviderName  string         `json:"provider_name"`
-	ProviderPhoto sql.NullString `json:"provider_photo"`
+	ProviderPhoto []byte         `json:"provider_photo"`
 	CategoryName  string         `json:"category_name"`
 }
 
@@ -576,7 +576,7 @@ type SearchServicesRow struct {
 	City          sql.NullString `json:"city"`
 	District      sql.NullString `json:"district"`
 	ProviderName  string         `json:"provider_name"`
-	ProviderPhoto sql.NullString `json:"provider_photo"`
+	ProviderPhoto []byte         `json:"provider_photo"`
 	CategoryName  string         `json:"category_name"`
 }
 
