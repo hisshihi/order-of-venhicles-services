@@ -427,6 +427,18 @@ func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAv
 	return items, nil
 }
 
+const listCountOrdersByClientID = `-- name: ListCountOrdersByClientID :one
+SELECT COUNT(*) FROM "orders"
+WHERE client_id = $1
+`
+
+func (q *Queries) ListCountOrdersByClientID(ctx context.Context, clientID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, listCountOrdersByClientID, clientID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const listOrdersByClientID = `-- name: ListOrdersByClientID :many
 SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
     sc.name as category_name,

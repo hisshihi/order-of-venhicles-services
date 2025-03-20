@@ -39,6 +39,10 @@ WHERE o.client_id = $1
 ORDER BY o.created_at DESC
 LIMIT $2 OFFSET $3;
 
+-- name: ListCountOrdersByClientID :one
+SELECT COUNT(*) FROM "orders"
+WHERE client_id = $1;
+
 -- name: ListAvailableOrdersForProvider :many
 -- Получает список доступных заказов для провайдера услуг
 SELECT o.*,

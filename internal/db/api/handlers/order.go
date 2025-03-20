@@ -164,6 +164,11 @@ type listOrdersRequest struct {
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
+type listOrdersRespons struct {
+	Orders []sqlc.ListOrdersByClientIDRow `json:"orders"`
+	OrdersSize int `json:"orders_size"`
+}
+
 // listOrders обрабатывает запрос на получение списка заказов клиента
 func (server *Server) listOrders(ctx *gin.Context) {
 	var req listOrdersRequest
@@ -192,7 +197,19 @@ func (server *Server) listOrders(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, orders)
+	// Получаем кол-во записей
+	orderSize, err := server.store.ListCountOrdersByClientID(ctx, user.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	rsp := listOrdersRespons{
+		Orders: orders,
+		OrdersSize: int(orderSize),
+	}
+
+	ctx.JSON(http.StatusOK, rsp)
 }
 
 // listAvailableOrdersRequest представляет запрос на получение доступных заказов для провайдера
