@@ -238,6 +238,18 @@ func (q *Queries) GetServicesByProviderID(ctx context.Context, arg GetServicesBy
 	return items, nil
 }
 
+const listCountServicesByCatetegory = `-- name: ListCountServicesByCatetegory :one
+SELECT COUNT(*) FROM "services"
+WHERE category_id = $1
+`
+
+func (q *Queries) ListCountServicesByCatetegory(ctx context.Context, categoryID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, listCountServicesByCatetegory, categoryID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const listServices = `-- name: ListServices :many
 SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district,
     u.username as provider_name,

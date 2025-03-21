@@ -266,7 +266,16 @@ func (server *Server) listServiceByCategoryID(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, services)
+	servicesSize, err := server.store.ListCountServicesByCatetegory(ctx, req.CategoryID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"service": services,
+		"service_size": servicesSize,
+	})
 }
 
 func (server *Server) listService(ctx *gin.Context) {

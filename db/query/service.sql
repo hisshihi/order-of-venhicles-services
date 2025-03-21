@@ -69,6 +69,11 @@ FROM "services" s
     JOIN "service_categories" sc ON s.category_id = sc.id
 ORDER BY s.created_at DESC
 LIMIT $1 OFFSET $2;
+
+-- name: ListCountServicesByCatetegory :one
+SELECT COUNT(*) FROM "services"
+WHERE category_id = $1;
+
 -- name: ListServicesByCategory :many
 SELECT s.*,
     u.username as provider_name,

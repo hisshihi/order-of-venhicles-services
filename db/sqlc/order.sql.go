@@ -153,6 +153,8 @@ SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o
     u.username as client_name,
     u.phone as client_phone,
     u.whatsapp as client_whatsapp,
+    u.city as client_city,
+    u.district as client_district,
     p.username as provider_name,
     p.phone as provider_phone,
     p.whatsapp as provider_whatsapp,
@@ -182,6 +184,8 @@ type GetOrderByIDRow struct {
 	ClientName         string           `json:"client_name"`
 	ClientPhone        string           `json:"client_phone"`
 	ClientWhatsapp     string           `json:"client_whatsapp"`
+	ClientCity         sql.NullString   `json:"client_city"`
+	ClientDistrict     sql.NullString   `json:"client_district"`
 	ProviderName       sql.NullString   `json:"provider_name"`
 	ProviderPhone      sql.NullString   `json:"provider_phone"`
 	ProviderWhatsapp   sql.NullString   `json:"provider_whatsapp"`
@@ -208,6 +212,8 @@ func (q *Queries) GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, 
 		&i.ClientName,
 		&i.ClientPhone,
 		&i.ClientWhatsapp,
+		&i.ClientCity,
+		&i.ClientDistrict,
 		&i.ProviderName,
 		&i.ProviderPhone,
 		&i.ProviderWhatsapp,
