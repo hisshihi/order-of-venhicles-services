@@ -260,7 +260,16 @@ func (server *Server) listAvailableOrders(ctx *gin.Context) {
 		}
 	}
 
-	ctx.JSON(http.StatusOK, resultOrders)
+	ordersSize, err := server.store.ListCountAvailableOrdersForProvider(ctx, user.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"orders": resultOrders,
+		"orders_size": ordersSize,
+	})
 }
 
 // acceptOrderRequest представляет запрос на принятие заказа провайдером

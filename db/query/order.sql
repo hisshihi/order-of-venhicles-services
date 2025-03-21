@@ -48,7 +48,8 @@ WHERE client_id = $1;
 SELECT o.*,
     sc.name as category_name,
     u.username as client_name,
-    u.city as client_city
+    u.city as client_city,
+    u.district as client_district
 FROM "orders" o
     JOIN "service_categories" sc ON o.category_id = sc.id
     JOIN "users" u ON o.client_id = u.id
@@ -64,6 +65,16 @@ WHERE -- Заказ все еще открыт (pending)
     o.provider_accepted = false
 ORDER BY o.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: ListCountAvailableOrdersForProvider :one
+SELECT COUNT(*) FROM "orders"
+WHERE status = 'pending'
+    AND provider_accepted = false
+    AND category_id IN (
+        SELECT DISTINCT category_id
+        FROM "services"
+        WHERE provider_id = $1
+    );
 
 -- name: AcceptOrderByProviderID :one
 -- Провайдер принимает заказ и указывает свою услугу

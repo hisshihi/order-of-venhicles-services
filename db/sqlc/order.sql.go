@@ -347,7 +347,8 @@ const listAvailableOrdersForProvider = `-- name: ListAvailableOrdersForProvider 
 SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date,
     sc.name as category_name,
     u.username as client_name,
-    u.city as client_city
+    u.city as client_city,
+    u.district as client_district
 FROM "orders" o
     JOIN "service_categories" sc ON o.category_id = sc.id
     JOIN "users" u ON o.client_id = u.id
@@ -386,6 +387,7 @@ type ListAvailableOrdersForProviderRow struct {
 	CategoryName     string           `json:"category_name"`
 	ClientName       string           `json:"client_name"`
 	ClientCity       sql.NullString   `json:"client_city"`
+	ClientDistrict   sql.NullString   `json:"client_district"`
 }
 
 // Получает список доступных заказов для провайдера услуг
@@ -413,6 +415,7 @@ func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAv
 			&i.CategoryName,
 			&i.ClientName,
 			&i.ClientCity,
+			&i.ClientDistrict,
 		); err != nil {
 			return nil, err
 		}
@@ -425,6 +428,24 @@ func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAv
 		return nil, err
 	}
 	return items, nil
+}
+
+const listCountAvailableOrdersForProvider = `-- name: ListCountAvailableOrdersForProvider :one
+SELECT COUNT(*) FROM "orders"
+WHERE status = 'pending'
+    AND provider_accepted = false
+    AND category_id IN (
+        SELECT DISTINCT category_id
+        FROM "services"
+        WHERE provider_id = $1
+    )
+`
+
+func (q *Queries) ListCountAvailableOrdersForProvider(ctx context.Context, providerID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, listCountAvailableOrdersForProvider, providerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const listCountOrdersByClientID = `-- name: ListCountOrdersByClientID :one

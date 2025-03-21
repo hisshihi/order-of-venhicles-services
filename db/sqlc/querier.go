@@ -80,6 +80,7 @@ type Querier interface {
 	GetUserRecentChats(ctx context.Context, arg GetUserRecentChatsParams) ([]GetUserRecentChatsRow, error)
 	// Получает список доступных заказов для провайдера услуг
 	ListAvailableOrdersForProvider(ctx context.Context, arg ListAvailableOrdersForProviderParams) ([]ListAvailableOrdersForProviderRow, error)
+	ListCountAvailableOrdersForProvider(ctx context.Context, providerID int64) (int64, error)
 	ListCountOrdersByClientID(ctx context.Context, clientID int64) (int64, error)
 	// Получает список избранных услугодателей клиента
 	ListFavoriteProviders(ctx context.Context, arg ListFavoriteProvidersParams) ([]ListFavoriteProvidersRow, error)
