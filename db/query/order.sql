@@ -169,10 +169,8 @@ FROM provider_orders;
 
 -- name: UpdateOrder :one
 UPDATE orders
-SET client_id = $2,
-    category_id = $3,
-    service_id = $4,
-    status = $5,
+SET category_id = $2,
+    client_message = $3,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;

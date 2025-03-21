@@ -541,6 +541,44 @@ func (server *Server) updateOrderStatus(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, updatedOrder)
 }
 
+type updateOrderRequest struct {
+	OrderID int64 `json:"order_id" binding:"min=1,required"`
+	CategoryID int64 `json:"category_id" binding:"min=1,required"`
+	ClientMessage string `json:"client_message" binding:"required"`
+}
+
+func (server *Server) updatedOrder(ctx *gin.Context) {
+	var req updateOrderRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	isOrder, err := server.store.GetOrderByID(ctx, req.OrderID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.UpdateOrderParams{
+		ID: isOrder.ID,
+		CategoryID: req.CategoryID,
+		ClientMessage: sql.NullString{String: req.ClientMessage,Valid: true},
+	}
+
+	updateOrder, err := server.store.UpdateOrder(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, updateOrder)
+}
+
 // getOrdersStatisticsResponse представляет ответ со статистикой заказов
 type getOrdersStatisticsResponse struct {
 	PendingCount   int64 `json:"pending_count"`

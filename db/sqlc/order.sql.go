@@ -553,31 +553,21 @@ func (q *Queries) ListOrdersByClientID(ctx context.Context, arg ListOrdersByClie
 
 const updateOrder = `-- name: UpdateOrder :one
 UPDATE orders
-SET client_id = $2,
-    category_id = $3,
-    service_id = $4,
-    status = $5,
+SET category_id = $2,
+    client_message = $3,
     updated_at = NOW()
 WHERE id = $1
 RETURNING id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date, selected_provider_id
 `
 
 type UpdateOrderParams struct {
-	ID         int64            `json:"id"`
-	ClientID   int64            `json:"client_id"`
-	CategoryID int64            `json:"category_id"`
-	ServiceID  sql.NullInt64    `json:"service_id"`
-	Status     NullStatusOrders `json:"status"`
+	ID            int64          `json:"id"`
+	CategoryID    int64          `json:"category_id"`
+	ClientMessage sql.NullString `json:"client_message"`
 }
 
 func (q *Queries) UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error) {
-	row := q.db.QueryRowContext(ctx, updateOrder,
-		arg.ID,
-		arg.ClientID,
-		arg.CategoryID,
-		arg.ServiceID,
-		arg.Status,
-	)
+	row := q.db.QueryRowContext(ctx, updateOrder, arg.ID, arg.CategoryID, arg.ClientMessage)
 	var i Order
 	err := row.Scan(
 		&i.ID,
