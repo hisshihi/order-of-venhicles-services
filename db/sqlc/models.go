@@ -202,17 +202,29 @@ type Message struct {
 }
 
 type Order struct {
-	ID               int64            `json:"id"`
-	ClientID         int64            `json:"client_id"`
-	CategoryID       int64            `json:"category_id"`
-	ServiceID        sql.NullInt64    `json:"service_id"`
-	Status           NullStatusOrders `json:"status"`
-	CreatedAt        time.Time        `json:"created_at"`
-	UpdatedAt        time.Time        `json:"updated_at"`
-	ProviderAccepted sql.NullBool     `json:"provider_accepted"`
-	ProviderMessage  sql.NullString   `json:"provider_message"`
-	ClientMessage    sql.NullString   `json:"client_message"`
-	OrderDate        sql.NullTime     `json:"order_date"`
+	ID                 int64            `json:"id"`
+	ClientID           int64            `json:"client_id"`
+	CategoryID         int64            `json:"category_id"`
+	ServiceID          sql.NullInt64    `json:"service_id"`
+	Status             NullStatusOrders `json:"status"`
+	CreatedAt          time.Time        `json:"created_at"`
+	UpdatedAt          time.Time        `json:"updated_at"`
+	ProviderAccepted   sql.NullBool     `json:"provider_accepted"`
+	ProviderMessage    sql.NullString   `json:"provider_message"`
+	ClientMessage      sql.NullString   `json:"client_message"`
+	OrderDate          sql.NullTime     `json:"order_date"`
+	SelectedProviderID sql.NullInt64    `json:"selected_provider_id"`
+}
+
+type OrderResponse struct {
+	ID           int64          `json:"id"`
+	OrderID      int64          `json:"order_id"`
+	ProviderID   int64          `json:"provider_id"`
+	Message      sql.NullString `json:"message"`
+	OfferedPrice sql.NullString `json:"offered_price"`
+	IsSelected   sql.NullBool   `json:"is_selected"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
 type PartnerStatistic struct {

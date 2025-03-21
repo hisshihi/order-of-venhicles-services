@@ -19,10 +19,18 @@ type Querier interface {
 	CheckIfClientReviewedOrder(ctx context.Context, arg CheckIfClientReviewedOrderParams) (bool, error)
 	// Проверяет, добавлен ли услугодатель в избранное клиента
 	CheckIfProviderIsFavorite(ctx context.Context, arg CheckIfProviderIsFavoriteParams) (bool, error)
+	// Подсчитывает количество откликов на конкретный заказ
+	// Входные параметры: ID заказа
+	// Возвращает: количество откликов (число)
+	CountOrderResponsesByOrderId(ctx context.Context, orderID int64) (int64, error)
 	CountServicesByProviderID(ctx context.Context, providerID int64) (int64, error)
 	// Создает новое сообщение
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
+	// Создает новый отклик на заказ от провайдера услуг
+	// Входные параметры: ID заказа, ID провайдера, сообщение, предложенная цена, выбран ли отклик
+	// Возвращает: созданную запись отклика
+	CreateOrderResponse(ctx context.Context, arg CreateOrderResponseParams) (OrderResponse, error)
 	CreatePayment(ctx context.Context, arg CreatePaymentParams) (Payment, error)
 	CreatePendingSubscription(ctx context.Context, arg CreatePendingSubscriptionParams) (PendingSubscription, error)
 	CreatePromoCode(ctx context.Context, arg CreatePromoCodeParams) (PromoCode, error)
@@ -33,6 +41,10 @@ type Querier interface {
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteOrder(ctx context.Context, id int64) error
+	// Удаляет отклик по его ID
+	// Входные параметры: ID отклика
+	// Возвращает: ничего
+	DeleteOrderResponse(ctx context.Context, id int64) error
 	DeletePayment(ctx context.Context, id int64) error
 	DeletePendingSubscriptionByPaymentID(ctx context.Context, paymentID int64) error
 	DeletePromoCode(ctx context.Context, id int64) error
@@ -50,10 +62,34 @@ type Querier interface {
 	// Получает историю переписки между двумя пользователями
 	GetMessagesByUsers(ctx context.Context, arg GetMessagesByUsersParams) ([]GetMessagesByUsersRow, error)
 	GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, error)
+	// Получает отклик по его ID
+	// Входные параметры: ID отклика
+	// Возвращает: запись отклика или ничего, если отклик не найден
+	GetOrderResponseById(ctx context.Context, id int64) (OrderResponse, error)
+	// Проверяет наличие отклика от конкретного провайдера на конкретный заказ
+	// Входные параметры: ID заказа, ID провайдера
+	// Возвращает: запись отклика или ничего, если отклик не найден
+	GetOrderResponseByOrderAndProvider(ctx context.Context, arg GetOrderResponseByOrderAndProviderParams) (OrderResponse, error)
+	// Получает все отклики для конкретного заказа с информацией о провайдерах
+	// Входные параметры: ID заказа
+	// Возвращает: список откликов с данными провайдеров (имя, телефон, whatsapp, фото)
+	GetOrderResponsesByOrderId(ctx context.Context, orderID int64) ([]GetOrderResponsesByOrderIdRow, error)
+	// Получает все отклики, созданные конкретным провайдером, с информацией о связанных заказах
+	// Входные параметры: ID провайдера, лимит и смещение для пагинации
+	// Возвращает: список откликов с основной информацией о заказах
+	GetOrderResponsesByProviderId(ctx context.Context, arg GetOrderResponsesByProviderIdParams) ([]GetOrderResponsesByProviderIdRow, error)
 	// Получает статистику заказов для услугодателя
 	GetOrderStatistics(ctx context.Context, dollar_1 sql.NullInt64) (GetOrderStatisticsRow, error)
 	// Получает список заказов по категории
 	GetOrdersByCategory(ctx context.Context, arg GetOrdersByCategoryParams) ([]GetOrdersByCategoryRow, error)
+	// Получает все заказы, на которые провайдер оставил отклики (даже если не выбран)
+	// Входные параметры: ID провайдера, лимит и смещение для пагинации
+	// Возвращает: список заказов с базовой информацией о клиенте и категории
+	GetOrdersWithResponsesByProvider(ctx context.Context, arg GetOrdersWithResponsesByProviderParams) ([]GetOrdersWithResponsesByProviderRow, error)
+	// Получает список заказов, для которых выбран провайдер, с детальной информацией
+	// Входные параметры: лимит и смещение для пагинации
+	// Возвращает: список заказов с данными о клиенте, категории и провайдере
+	GetOrdersWithSelectedProvider(ctx context.Context, arg GetOrdersWithSelectedProviderParams) ([]GetOrdersWithSelectedProviderRow, error)
 	GetPaymentByID(ctx context.Context, id int64) (Payment, error)
 	GetPendingSubscriptionByPaymentID(ctx context.Context, paymentID int64) (PendingSubscription, error)
 	GetPromoCodeByCode(ctx context.Context, code string) (PromoCode, error)
@@ -64,6 +100,14 @@ type Querier interface {
 	GetReviewByID(ctx context.Context, id int64) (GetReviewByIDRow, error)
 	// Получает все отзывы об услугодателе
 	GetReviewsByProviderID(ctx context.Context, arg GetReviewsByProviderIDParams) ([]GetReviewsByProviderIDRow, error)
+	// Получает данные выбранного провайдера для конкретного заказа
+	// Входные параметры: ID заказа
+	// Возвращает: запись пользователя-провайдера или ничего, если провайдер не выбран
+	GetSelectedProviderForOrder(ctx context.Context, id int64) (User, error)
+	// Получает выбранный отклик для конкретного заказа
+	// Входные параметры: ID заказа
+	// Возвращает: запись выбранного отклика или ничего, если отклик не выбран
+	GetSelectedResponseForOrder(ctx context.Context, orderID int64) (OrderResponse, error)
 	GetServiceByID(ctx context.Context, id int64) (GetServiceByIDRow, error)
 	GetServiceCategoryByID(ctx context.Context, id int64) (ServiceCategory, error)
 	GetServiceCategoryBySlug(ctx context.Context, slug string) (ServiceCategory, error)
@@ -78,6 +122,10 @@ type Querier interface {
 	GetUserByIDFromUser(ctx context.Context, id int64) (User, error)
 	// Получает список недавних чатов пользователя
 	GetUserRecentChats(ctx context.Context, arg GetUserRecentChatsParams) ([]GetUserRecentChatsRow, error)
+	// Проверяет, откликнулся ли провайдер на заказ
+	// Входные параметры: ID заказа, ID провайдера
+	// Возвращает: булево значение (true/false)
+	HasProviderRespondedToOrder(ctx context.Context, arg HasProviderRespondedToOrderParams) (bool, error)
 	// Получает список доступных заказов для провайдера услуг
 	ListAvailableOrdersForProvider(ctx context.Context, arg ListAvailableOrdersForProviderParams) ([]ListAvailableOrdersForProviderRow, error)
 	ListCountAvailableOrdersForProvider(ctx context.Context, providerID int64) (int64, error)
@@ -104,7 +152,21 @@ type Querier interface {
 	// Удаляет услугодателя из избранного клиента
 	RemoveProviderFromFavorites(ctx context.Context, arg RemoveProviderFromFavoritesParams) error
 	SearchServices(ctx context.Context, arg SearchServicesParams) ([]SearchServicesRow, error)
+	// Выбирает провайдера для выполнения заказа (транзакционный запрос)
+	// Обновляет статус отклика на "выбран" и устанавливает выбранного провайдера в заказе
+	// Входные параметры: ID отклика
+	// Возвращает: обновленную запись заказа
+	SelectProviderForOrder(ctx context.Context, dollar_1 sql.NullInt64) (Order, error)
+	// Отменяет выбор провайдера для заказа (транзакционный запрос)
+	// Сбрасывает статус отклика и очищает поле выбранного провайдера в заказе
+	// Входные параметры: ID отклика
+	// Возвращает: количество обновленных строк (должно быть 1)
+	UnselectProviderForOrder(ctx context.Context, dollar_1 sql.NullInt64) (int64, error)
 	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)
+	// Обновляет информацию в существующем отклике
+	// Входные параметры: ID отклика, новое сообщение, новая предложенная цена
+	// Возвращает: обновленную запись отклика
+	UpdateOrderResponse(ctx context.Context, arg UpdateOrderResponseParams) (OrderResponse, error)
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
 	UpdatePayment(ctx context.Context, arg UpdatePaymentParams) (Payment, error)
 	UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) (Payment, error)
