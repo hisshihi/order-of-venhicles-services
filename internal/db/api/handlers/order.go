@@ -680,6 +680,26 @@ func (server *Server) getOrdersByCategory(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, orders)
 }
 
+func (server *Server) deleteOrder(ctx *gin.Context) {
+	var req getOrderByIDRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := server.store.DeleteOrder(ctx, req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
+}
+
 // Вспомогательная функция для проверки, имеет ли провайдер услуги в определенной категории
 func (server *Server) checkProviderHasServicesInCategory(ctx *gin.Context, providerID, categoryID int64) (bool, error) {
 	services, err := server.store.ListServicesByProviderIDAndCategory(ctx, sqlc.ListServicesByProviderIDAndCategoryParams{
