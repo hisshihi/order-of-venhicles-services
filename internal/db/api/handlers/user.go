@@ -29,14 +29,14 @@ type createUserRequest struct {
 }
 
 type User struct {
-	Username string  `json:"username"`
-	Email    string  `json:"email"`
-	Country  *string `json:"country"`
-	City     *string `json:"city"`
-	District *string `json:"district"`
-	Phone    string  `json:"phone"`
-	Whatsapp string  `json:"whatsapp"`
-	PhotoUrl string  `json:"photo_url,omitempty"`
+	Username  string  `json:"username"`
+	Email     string  `json:"email"`
+	Country   *string `json:"country"`
+	City      *string `json:"city"`
+	District  *string `json:"district"`
+	Phone     string  `json:"phone"`
+	Whatsapp  string  `json:"whatsapp"`
+	PhotoUrl  string  `json:"photo_url,omitempty"`
 	PhotoMime string  `json:"photo_mime,omitempty"`
 }
 
@@ -168,18 +168,28 @@ func (server *Server) createUser(ctx *gin.Context) {
 
 	rsp := createUserResponse{
 		User: User{
-			Username: user.Username,
-			Email:    user.Email,
-			Country:  &user.Country.String,
-			City:     &user.City.String,
-			District: &user.District.String,
-			Phone:    user.Phone,
-			Whatsapp: user.Whatsapp,
-			PhotoUrl: base64.StdEncoding.EncodeToString(user.PhotoUrl),
+			Username:  user.Username,
+			Email:     user.Email,
+			Country:   &user.Country.String,
+			City:      &user.City.String,
+			District:  &user.District.String,
+			Phone:     user.Phone,
+			Whatsapp:  user.Whatsapp,
+			PhotoUrl:  base64.StdEncoding.EncodeToString(user.PhotoUrl),
 			PhotoMime: contentType,
 		},
 		AccessToken: accessToken,
 	}
+
+	ctx.SetCookie(
+		"auth_token",
+		accessToken,
+		int(server.config.AccessTokenDuration.Seconds()),
+		"/",
+		"",
+		false, // TODO: поменять на true для продакшена
+		true,
+	)
 
 	ctx.JSON(http.StatusOK, rsp)
 }
@@ -281,7 +291,7 @@ type getCurrentUserResponse struct {
 	Phone    string `json:"phone"`
 	Whatsapp string `json:"whatsapp"`
 	Role     string `json:"role"`
-	PhotoUrl string  `json:"photo_url,omitempty"`
+	PhotoUrl string `json:"photo_url,omitempty"`
 }
 
 func (server *Server) getCurrentUser(ctx *gin.Context) {
@@ -354,4 +364,79 @@ func (server *Server) getUserByID(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, userResponse)
+}
+
+// Профиль пользователя
+func (server *Server) profileUser(ctx *gin.Context) {
+	var req struct {
+		ID       int64 `form:"id" binding:"required,min=1"`
+		PageID   int32 `form:"page_id" binding:"required,min=1"`
+		PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
+	}
+
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// Получаем пользователя по ID из URI
+	user, err := server.store.GetUserByIDFromUser(ctx, req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	var averageRating sqlc.GetAverageRatingForProviderRow
+	var allRating []sqlc.GetReviewsByProviderIDRow
+	if user.Role.Role == sqlc.RoleProvider {
+		averageRating, err = server.store.GetAverageRatingForProvider(ctx, user.ID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		}
+
+		arg := sqlc.GetReviewsByProviderIDParams{
+			ProviderID: user.ID,
+			Limit:      int64(req.PageSize),
+			Offset:     int64((req.PageID - 1) * req.PageSize),
+		}
+
+		allRating, err = server.store.GetReviewsByProviderID(ctx, arg)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+	}
+
+	userResponse := struct {
+		ID            int64                               `json:"id"`
+		Username      string                              `json:"username"`
+		Email         string                              `json:"email"`
+		Country       string                              `json:"country,omitempty"`
+		City          string                              `json:"city,omitempty"`
+		District      string                              `json:"district,omitempty"`
+		Phone         string                              `json:"phone"`
+		Whatsapp      string                              `json:"whatsapp"`
+		CreatedAt     time.Time                           `json:"created_at"`
+		AverageRating sqlc.GetAverageRatingForProviderRow `json:"average_rating"`
+		AllRating     []sqlc.GetReviewsByProviderIDRow    `json:"all_rating"`
+	}{
+		ID:            user.ID,
+		Username:      user.Username,
+		Email:         user.Email,
+		Country:       user.Country.String,
+		City:          user.City.String,
+		District:      user.District.String,
+		Phone:         user.Phone,
+		Whatsapp:      user.Whatsapp,
+		CreatedAt:     user.CreatedAt,
+		AverageRating: averageRating,
+		AllRating: allRating,
+	}
+
+	ctx.JSON(http.StatusOK, userResponse)
+
 }

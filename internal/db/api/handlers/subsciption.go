@@ -158,7 +158,7 @@ func (server *Server) checkSubscriptionActive(ctx *gin.Context) {
 		return
 	}
 
-	if user.Role.Role != sqlc.RoleProvider {
+	if user.Role.Role == sqlc.RoleClient {
 		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("только услугодатели могут иметь подписку")))
 	}
 

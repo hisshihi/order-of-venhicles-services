@@ -302,7 +302,7 @@ func (server *Server) listService(ctx *gin.Context) {
 type updateServiceRequest struct {
 	CategoryID  int64  `json:"category_id" binding:"min=1,required"`
 	Title       string `json:"title" binding:"required,min=5"`
-	Description string `json:"description" binding:"required,min=50"`
+	Description string `json:"description" binding:"required,min=10"`
 	Price       string `json:"price" binding:"required"`
 	Country     string `json:"country" binding:"required"`
 	City        string `json:"city" binding:"required"`
@@ -418,5 +418,5 @@ func (server *Server) deleteService(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 	}
 
-	ctx.JSON(http.StatusNotFound, nil)
+	ctx.JSON(http.StatusNoContent, nil)
 }

@@ -233,7 +233,7 @@ func (server *Server) listAvailableOrders(ctx *gin.Context) {
 	}
 
 	// Проверяем, что пользователь - провайдер
-	if user.Role.Role != sqlc.RoleProvider && user.Role.Role != sqlc.RoleAdmin {
+	if user.Role.Role == sqlc.RoleClient {
 		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("только провайдеры могут просматривать доступные заказы")))
 		return
 	}

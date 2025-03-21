@@ -96,7 +96,7 @@ func (server *Server) initiateSubscriptionPayment(ctx *gin.Context) {
 		return
 	}
 
-	if user.Role.Role != sqlc.RoleProvider {
+	if user.Role.Role == sqlc.RoleClient {
 		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("нет доступа к этой функции")))
 		return
 	}

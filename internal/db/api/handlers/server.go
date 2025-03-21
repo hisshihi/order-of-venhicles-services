@@ -126,6 +126,7 @@ func (server *Server) setupServer() {
 
 	// Маршруты доступные всем авторизированным пользователям
 	authRoutes.GET("/users/me", server.getCurrentUser)
+	authRoutes.GET("/profile", server.profileUser)
 
 	// Маршруты для клиентов
 	clientRoutes := router.Group("/client")
@@ -157,6 +158,7 @@ func (server *Server) setupServer() {
 	providerRoutes.Use(server.authMiddleware())
 	providerRoutes.Use(server.roleCheckMiddleware(
 		string(sqlc.RoleProvider),
+		string(sqlc.RolePartner),
 		string(sqlc.RoleAdmin),
 	))
 
