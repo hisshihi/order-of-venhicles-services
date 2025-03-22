@@ -1,8 +1,7 @@
 package config
 
 import (
-	"path/filepath"
-	"runtime"
+	"fmt"
 	"time"
 
 	"github.com/spf13/viper"
@@ -10,9 +9,10 @@ import (
 
 // Config хранит все конфигурационные настройки приложения
 type Config struct {
-	DBDriver  string `mapstructure:"DB_DRIVER"`
-	DBSource  string `mapstructure:"DB_SOURCE"`
-	DBAddress string `mapstructure:"SERVER_ADDRESS"`
+	DBDriver    string `mapstructure:"DB_DRIVER"`
+	DBSource    string `mapstructure:"DB_SOURCE"`
+	DBAddress   string `mapstructure:"SERVER_ADDRESS"`
+	Environment string `mapstructure:"ENVIRONMENT"` // Среда выполнения: development, production, test
 
 	AdminUsername string `mapstructure:"ADMIN_USERNAME"`
 	AdminEmail    string `mapstructure:"ADMIN_EMAIL"`
@@ -35,29 +35,35 @@ type Config struct {
 	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
 }
 
-func GetProjectRoot() string {
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	projectRoot := filepath.Join(dir, "..", "..")
-	return projectRoot
-}
-
-// LoadConfig считывает конфигурационные параметры из файла или переменных окружения
 func LoadConfig() (config Config, err error) {
-	projectRoot := GetProjectRoot()
-	configPath := filepath.Join(projectRoot, "cmd")
-
-	viper.AddConfigPath(configPath)
-	viper.SetConfigName("app")
-	viper.SetConfigType("env")
-
-	viper.AutomaticEnv()
-
-	err = viper.ReadInConfig()
-	if err != nil {
-		return
+	// Возможные пути к файлу конфигурации
+	possiblePaths := []string{
+		".",     // Текущая директория (для случаев, когда запуск из cmd)
+		"./cmd", // Относительно корня проекта или Docker
 	}
 
+	// Добавляем пути в viper
+	for _, path := range possiblePaths {
+		viper.AddConfigPath(path)
+	}
+
+	viper.SetConfigName("app") // Имя файла без расширения
+	viper.SetConfigType("env") // Формат файла — .env
+
+	// Поддержка переменных окружения (опционально)
+	viper.AutomaticEnv()
+
+	// Чтение конфигурации
+	err = viper.ReadInConfig()
+	if err != nil {
+		return config, fmt.Errorf("ошибка чтения файла конфигурации: %w", err)
+	}
+
+	// Декодирование в структуру
 	err = viper.Unmarshal(&config)
-	return
+	if err != nil {
+		return config, fmt.Errorf("не удалось декодировать конфигурацию: %w", err)
+	}
+
+	return config, nil
 }

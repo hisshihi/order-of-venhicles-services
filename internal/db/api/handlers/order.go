@@ -122,10 +122,10 @@ func (server *Server) getOrderByID(ctx *gin.Context) {
 	}
 
 	// Получаем данные пользователя из токена
-	user, err := server.getUserDataFromToken(ctx)
-	if err != nil {
-		return
-	}
+	// user, err := server.getUserDataFromToken(ctx)
+	// if err != nil {
+	// 	return
+	// }
 
 	// Получаем заказ из базы данных
 	order, err := server.store.GetOrderByID(ctx, req.ID)
@@ -140,20 +140,20 @@ func (server *Server) getOrderByID(ctx *gin.Context) {
 
 	// Проверяем, имеет ли пользователь доступ к этому заказу
 	// Клиент может видеть только свои заказы, провайдер - только заказы в своих категориях
-	if user.ID != order.ClientID && user.Role.Role != sqlc.RoleAdmin {
-		// Если пользователь не клиент и не администратор, проверяем, является ли он провайдером
-		if user.Role.Role == sqlc.RoleProvider {
-			// Проверяем, есть ли у провайдера услуги в категории заказа
-			hasServices, err := server.checkProviderHasServicesInCategory(ctx, user.ID, order.CategoryID)
-			if err != nil || !hasServices {
-				ctx.JSON(http.StatusForbidden, errorResponse(errors.New("у вас нет доступа к этому заказу")))
-				return
-			}
-		} else {
-			ctx.JSON(http.StatusForbidden, errorResponse(errors.New("у вас нет доступа к этому заказу")))
-			return
-		}
-	}
+	// if user.ID != order.ClientID && user.Role.Role != sqlc.RoleAdmin {
+	// 	// Если пользователь не клиент и не администратор, проверяем, является ли он провайдером
+	// 	if user.Role.Role == sqlc.RoleProvider {
+	// 		// Проверяем, есть ли у провайдера услуги в категории заказа
+	// 		hasServices, err := server.checkProviderHasServicesInCategory(ctx, user.ID, order.CategoryID)
+	// 		if err != nil || !hasServices {
+	// 			ctx.JSON(http.StatusForbidden, errorResponse(errors.New("у вас нет доступа к этому заказу")))
+	// 			return
+	// 		}
+	// 	} else {
+	// 		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("у вас нет доступа к этому заказу")))
+	// 		return
+	// 	}
+	// }
 
 	ctx.JSON(http.StatusOK, order)
 }

@@ -3,8 +3,11 @@ package api
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"errors"
 	"fmt"
+	"io"
+	ioFS "io/fs" // Переименовываем для избежания конфликта
 	"log"
 	"net/http"
 	"strings"
@@ -60,7 +63,17 @@ func NewServer(config config.Config, store *db.Store) (*Server, error) {
 	return server, nil
 }
 
+//go:embed dist/*
+var staticFiles embed.FS
+
 func (server *Server) setupServer() {
+	// Устанавливаем режим Gin в зависимости от значения в конфигурации
+	if server.config.Environment == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
+
 	router := gin.Default()
 
 	// Настраиваем доверенные прокси
@@ -71,26 +84,9 @@ func (server *Server) setupServer() {
 		"192.168.0.0/16", // локальные сети
 	})
 
-	// Установка функций для шаблонов
-	// router.SetFuncMap(template.FuncMap{
-	// 	"default": func(defaultValue, value any) any {
-	// 		if value == nil {
-	// 			return defaultValue
-	// 		}
-	// 		return value
-	// 	},
-	// 	"now": time.Now,
-	// })
-
-	// Загружаем шаблоны
-	// router.LoadHTMLGlob("templates/**/*")
-
-	// // Статические файлы
-	// router.Static("/static", "./static")
-
-	// Настройка CORS
+	// Правильная настройка CORS - не используем wildcard с credentials
 	corsConfig := cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     []string{"http://localhost:8080", "http://localhost:8081", "http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -102,34 +98,30 @@ func (server *Server) setupServer() {
 	// Применяем middleware для ограничения запросов
 	router.Use(rateLimiter)
 
-	// Страницы
-	// router.GET("/", server.homePage)
-	// router.GET("/login", server.loginPage)
+	// ПЕРВАЯ ЧАСТЬ: НАСТРОЙКА API
+	// ----------------------------------------------------
 
-	// Публичные маршруты (без авторизации)
-	router.POST("/create-user", server.createUser)
-	router.POST("/user/login", server.loginUser)
-	router.POST("/user/logout", server.logoutUser)
-	router.GET("/categories", server.listCategory)
-	router.GET("/categories/:id", server.getCategoryByID)
-	router.GET("/services/list/category", server.listServiceByCategoryID)
-	router.GET("/categories/slug", server.getCategoryBySlug)
+	// Создаем группу для API
+	apiGroup := router.Group("/api/v1")
 
-	// Защищённые HTML-маршруты
-	// htmlAuthRoutes := router.Group("/")
-	// htmlAuthRoutes.Use(server.htmlAuthMiddleware())
-	// htmlAuthRoutes.GET("/", handlers ...gin.HandlerFunc)
-
-	// Защищённые маршруты с ролевым доступом
-	authRoutes := router.Group("/")
-	authRoutes.Use(server.authMiddleware())
+	// Публичные API маршруты (без авторизации)
+	apiGroup.POST("/users", server.createUser)
+	apiGroup.POST("/users/login", server.loginUser)
+	apiGroup.POST("/users/logout", server.logoutUser)
+	apiGroup.GET("/categories", server.listCategory)
+	apiGroup.GET("/categories/:id", server.getCategoryByID)
+	apiGroup.GET("/services/list/category", server.listServiceByCategoryID)
+	apiGroup.GET("/categories/slug", server.getCategoryBySlug)
 
 	// Маршруты доступные всем авторизированным пользователям
+	authRoutes := apiGroup.Group("/auth")
+	authRoutes.Use(server.authMiddleware())
 	authRoutes.GET("/users/me", server.getCurrentUser)
 	authRoutes.GET("/profile", server.profileUser)
 
+	// Защищённые маршруты с ролевым доступом
 	// Маршруты для клиентов
-	clientRoutes := router.Group("/client")
+	clientRoutes := apiGroup.Group("/client")
 	clientRoutes.Use(server.authMiddleware())
 	clientRoutes.Use(server.roleCheckMiddleware(
 		string(sqlc.RoleClient),
@@ -148,26 +140,20 @@ func (server *Server) setupServer() {
 	clientRoutes.GET("/reviews", server.listReviewByProviderID)
 	clientRoutes.GET("/reviews/:id/rating", server.getAverageRatingForProvider)
 	clientRoutes.DELETE("/reviews/:id", server.deleteReview)
-
 	clientRoutes.GET("/services/:id", server.getServiceByID)
 	clientRoutes.GET("/services/list", server.listService)
 	clientRoutes.GET("/services/list/provider", server.listServiceByProviderID)
 
 	// Маршруты для поставщиков услуг
-	providerRoutes := router.Group("/provider")
+	providerRoutes := apiGroup.Group("/provider")
 	providerRoutes.Use(server.authMiddleware())
 	providerRoutes.Use(server.roleCheckMiddleware(
 		string(sqlc.RoleProvider),
 		string(sqlc.RolePartner),
 		string(sqlc.RoleAdmin),
 	))
-
 	// Маршруты, которые НЕ требуют подписки
-	// TODO: убрать конечные точки создание и обновление и реализовать эти методы только после оплаты(статус 200)
-	// providerRoutes.POST("/subscriptions", server.createSubscription)
-	// providerRoutes.POST("/subscriptions/update", server.updateSubscription)
 	providerRoutes.GET("/subscriptions/check", server.checkSubscriptionActive)
-	// providerRoutes.POST("/payment", server.createPayment)
 	providerRoutes.POST("/payments/initiate", server.initiateSubscriptionPayment)
 	providerRoutes.POST("/payments/callback", server.processPaymentCallback)
 	providerRoutes.GET("/payments/:payment_id/status", server.checkPaymentStatus)
@@ -177,7 +163,6 @@ func (server *Server) setupServer() {
 	// Маршруты, которые требуют подписку
 	subscriptionRequiredRoutes := providerRoutes.Group("/")
 	subscriptionRequiredRoutes.Use(server.subscriptionCheckMiddleware())
-
 	subscriptionRequiredRoutes.POST("/services", server.createService)
 	subscriptionRequiredRoutes.GET("/services", server.getServiceByProviderID)
 	subscriptionRequiredRoutes.GET("/services/list/u", server.listServiceFromProvider)
@@ -190,7 +175,7 @@ func (server *Server) setupServer() {
 	subscriptionRequiredRoutes.GET("/reviews/only", server.getReviewsByThisProviderID)
 
 	// Маршруты для партнеров
-	partnerRoutes := router.Group("/partner")
+	partnerRoutes := apiGroup.Group("/partner")
 	partnerRoutes.Use(server.authMiddleware())
 	partnerRoutes.Use(server.roleCheckMiddleware(
 		string(sqlc.RolePartner),
@@ -201,15 +186,103 @@ func (server *Server) setupServer() {
 	partnerRoutes.GET("/subscriptions/provider", server.listSubsciptionsByProviderID)
 
 	// Маршруты только для администраторов
-	adminRoutes := router.Group("/admin")
+	adminRoutes := apiGroup.Group("/admin")
 	adminRoutes.Use(server.authMiddleware())
 	adminRoutes.Use(server.roleCheckMiddleware(string(sqlc.RoleAdmin)))
 	adminRoutes.GET("/users/:id", server.getUserByID) // Доступ к данным пользователя по ID
 	adminRoutes.POST("/category", server.createCategory)
 	adminRoutes.PUT("/category/:id", server.updateCategory)
 	adminRoutes.DELETE("/category/:id", server.deleteCategory)
-	// Здесь можно добавить другие маршруты для администраторов
-	// adminRoutes.GET("/users", server.listAllUsers)
+
+	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
+	// ----------------------------------------------------
+
+	// Получаем доступ к статическим файлам
+	distFS, err := ioFS.Sub(staticFiles, "dist")
+	if err != nil {
+		log.Printf("Ошибка при создании подфайловой системы: %v", err)
+	}
+
+	// Запрещаем кэширование для всех запросов
+	router.Use(func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
+		c.Next()
+	})
+
+	// Обслуживаем assets напрямую
+	assetsFS, _ := ioFS.Sub(staticFiles, "dist/assets")
+	router.StaticFS("/assets", http.FS(assetsFS))
+
+	// Отдельно обрабатываем favicon.ico
+	router.GET("/favicon.ico", func(c *gin.Context) {
+		file, err := distFS.Open("favicon.ico")
+		if err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		defer file.Close()
+
+		stat, err := file.Stat()
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		http.ServeContent(c.Writer, c.Request, "favicon.ico", stat.ModTime(), file.(io.ReadSeeker))
+	})
+
+	// Явно регистрируем корневой маршрут
+	router.GET("/", func(c *gin.Context) {
+		file, err := distFS.Open("index.html")
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		stat, err := file.Stat()
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		http.ServeContent(c.Writer, c.Request, "index.html", stat.ModTime(), file.(io.ReadSeeker))
+	})
+
+	// Обработчик для всех остальных маршрутов (кроме API и статических файлов)
+	router.NoRoute(func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		// API запросы выводим 404
+		if strings.HasPrefix(path, "/api") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API endpoint not found"})
+			return
+		}
+
+		// Запросы к assets, которые не нашлись, выводим 404
+		if strings.HasPrefix(path, "/assets/") {
+			c.Status(http.StatusNotFound)
+			return
+		}
+
+		// Для всех остальных путей отдаем index.html (SPA подход)
+		file, err := distFS.Open("index.html")
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		stat, err := file.Stat()
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		http.ServeContent(c.Writer, c.Request, "index.html", stat.ModTime(), file.(io.ReadSeeker))
+	})
 
 	server.router = router
 
