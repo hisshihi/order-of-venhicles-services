@@ -366,22 +366,21 @@ FROM "orders" o
     JOIN "users" u ON o.client_id = u.id
 WHERE -- Заказ все еще открыт (pending)
     o.status = 'pending'
-    AND -- Провайдер предлагает услуги в этой категории
-    o.category_id IN (
-        SELECT DISTINCT category_id
-        FROM "services"
-        WHERE provider_id = $1
-    )
+    -- AND -- Провайдер предлагает услуги в этой категории
+    -- o.category_id IN (
+    --     SELECT DISTINCT category_id
+    --     FROM "services"
+    --     WHERE provider_id = $1
+    -- )
     AND -- Заказ не был принят провайдером
     o.provider_accepted = false
 ORDER BY o.created_at DESC
-LIMIT $2 OFFSET $3
+LIMIT $1 OFFSET $2
 `
 
 type ListAvailableOrdersForProviderParams struct {
-	ProviderID int64 `json:"provider_id"`
-	Limit      int64 `json:"limit"`
-	Offset     int64 `json:"offset"`
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
 }
 
 type ListAvailableOrdersForProviderRow struct {
@@ -405,7 +404,7 @@ type ListAvailableOrdersForProviderRow struct {
 
 // Получает список доступных заказов для провайдера услуг
 func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAvailableOrdersForProviderParams) ([]ListAvailableOrdersForProviderRow, error) {
-	rows, err := q.db.QueryContext(ctx, listAvailableOrdersForProvider, arg.ProviderID, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, listAvailableOrdersForProvider, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

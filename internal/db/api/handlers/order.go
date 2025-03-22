@@ -165,8 +165,8 @@ type listOrdersRequest struct {
 }
 
 type listOrdersRespons struct {
-	Orders []sqlc.ListOrdersByClientIDRow `json:"orders"`
-	OrdersSize int `json:"orders_size"`
+	Orders     []sqlc.ListOrdersByClientIDRow `json:"orders"`
+	OrdersSize int                            `json:"orders_size"`
 }
 
 // listOrders обрабатывает запрос на получение списка заказов клиента
@@ -205,7 +205,7 @@ func (server *Server) listOrders(ctx *gin.Context) {
 	}
 
 	rsp := listOrdersRespons{
-		Orders: orders,
+		Orders:     orders,
 		OrdersSize: int(orderSize),
 	}
 
@@ -214,6 +214,7 @@ func (server *Server) listOrders(ctx *gin.Context) {
 
 // listAvailableOrdersRequest представляет запрос на получение доступных заказов для провайдера
 type listAvailableOrdersRequest struct {
+	CategoryFilter int64 `form:"category_filter"`
 	PageID   int32 `form:"page_id" binding:"required,min=1"`
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
@@ -240,7 +241,7 @@ func (server *Server) listAvailableOrders(ctx *gin.Context) {
 
 	// Создаем параметры для запроса
 	arg := sqlc.ListAvailableOrdersForProviderParams{
-		ProviderID: user.ID,
+		// ProviderID: user.ID,
 		Limit:      int64(req.PageSize),
 		Offset:     int64((req.PageID - 1) * req.PageSize),
 	}
@@ -255,20 +256,20 @@ func (server *Server) listAvailableOrders(ctx *gin.Context) {
 	resultOrders := []sqlc.ListAvailableOrdersForProviderRow{}
 
 	for _, order := range orders {
-		if order.ClientCity.String == user.City.String {
-			resultOrders = append(resultOrders, order)
+		if req.CategoryFilter != 0 {
+			if order.ClientCity.String == user.City.String && order.CategoryID == req.CategoryFilter {
+				resultOrders = append(resultOrders, order)
+			}
+		} else {
+			if order.ClientCity.String == user.City.String {
+				resultOrders = append(resultOrders, order)
+			}
 		}
 	}
 
-	ordersSize, err := server.store.ListCountAvailableOrdersForProvider(ctx, user.ID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
 	ctx.JSON(http.StatusOK, gin.H{
-		"orders": resultOrders,
-		"orders_size": ordersSize,
+		"orders":      resultOrders,
+		"orders_size": len(resultOrders),
 	})
 }
 
@@ -542,8 +543,8 @@ func (server *Server) updateOrderStatus(ctx *gin.Context) {
 }
 
 type updateOrderRequest struct {
-	OrderID int64 `json:"order_id" binding:"min=1,required"`
-	CategoryID int64 `json:"category_id" binding:"min=1,required"`
+	OrderID       int64  `json:"order_id" binding:"min=1,required"`
+	CategoryID    int64  `json:"category_id" binding:"min=1,required"`
 	ClientMessage string `json:"client_message" binding:"required"`
 }
 
@@ -565,9 +566,9 @@ func (server *Server) updatedOrder(ctx *gin.Context) {
 	}
 
 	arg := sqlc.UpdateOrderParams{
-		ID: isOrder.ID,
-		CategoryID: req.CategoryID,
-		ClientMessage: sql.NullString{String: req.ClientMessage,Valid: true},
+		ID:            isOrder.ID,
+		CategoryID:    req.CategoryID,
+		ClientMessage: sql.NullString{String: req.ClientMessage, Valid: true},
 	}
 
 	updateOrder, err := server.store.UpdateOrder(ctx, arg)

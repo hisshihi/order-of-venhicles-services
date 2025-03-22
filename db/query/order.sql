@@ -57,16 +57,16 @@ FROM "orders" o
     JOIN "users" u ON o.client_id = u.id
 WHERE -- Заказ все еще открыт (pending)
     o.status = 'pending'
-    AND -- Провайдер предлагает услуги в этой категории
-    o.category_id IN (
-        SELECT DISTINCT category_id
-        FROM "services"
-        WHERE provider_id = $1
-    )
+    -- AND -- Провайдер предлагает услуги в этой категории
+    -- o.category_id IN (
+    --     SELECT DISTINCT category_id
+    --     FROM "services"
+    --     WHERE provider_id = $1
+    -- )
     AND -- Заказ не был принят провайдером
     o.provider_accepted = false
 ORDER BY o.created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $1 OFFSET $2;
 
 -- name: ListCountAvailableOrdersForProvider :one
 SELECT COUNT(*) FROM "orders"
