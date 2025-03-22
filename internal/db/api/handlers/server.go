@@ -86,7 +86,7 @@ func (server *Server) setupServer() {
 
 	// Правильная настройка CORS - не используем wildcard с credentials
 	corsConfig := cors.Config{
-		AllowOrigins:     []string{"http://localhost:8080", "http://localhost:8081", "http://localhost:5173"},
+		AllowOrigins:     []string{"http://localhost:8080", "http://localhost:8081", "http://localhost:5173", "https://order-of-venhicles-services.onrender.com"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
