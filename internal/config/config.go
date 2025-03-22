@@ -20,11 +20,11 @@ type Config struct {
 
 	ClientUsername string `mapstructure:"CLIENT_USERNAME"`
 	ClientEmail    string `mapstructure:"CLIENT_EMAIL"`
-	ClientPassword string `mapstructure:"PROVIDER_PASSWORD"`
+	ClientPassword string `mapstructure:"CLIENT_PASSWORD"`
 
 	ProviderUsername string `mapstructure:"PROVIDER_USERNAME"`
 	ProviderEmail    string `mapstructure:"PROVIDER_EMAIL"`
-	ProviderPassword string `mapstructure:"CLIENT_PASSWORD"`
+	ProviderPassword string `mapstructure:"PROVIDER_PASSWORD"`
 
 	PartnerUsername string `mapstructure:"PARTNER_USERNAME"`
 	PartnerEmail    string `mapstructure:"PARTNER_EMAIL"`
