@@ -35,11 +35,22 @@ type Config struct {
 	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
 }
 
-func LoadConfig() (config Config, err error) {
+func LoadConfig(configName ...string) (config Config, err error) {
+	// Определение имени файла конфигурации
+	fileName := "app"
+	if len(configName) > 0 && configName[0] != "" {
+		fileName = configName[0]
+	}
+
 	// Возможные пути к файлу конфигурации
 	possiblePaths := []string{
-		".",     // Текущая директория (для случаев, когда запуск из cmd)
-		"./cmd", // Относительно корня проекта или Docker
+		".",            // Текущая директория
+		"./cmd",        // Относительно корня проекта или Docker
+		"..",           // Родительская директория
+		"../..",        // Родительская директория уровнем выше
+		"../../cmd",    // cmd относительно корня проекта
+		"../../../cmd", // Для очень глубоких вложенных директорий
+		"../cmd",       // Для поддиректорий
 	}
 
 	// Добавляем пути в viper
@@ -47,8 +58,8 @@ func LoadConfig() (config Config, err error) {
 		viper.AddConfigPath(path)
 	}
 
-	viper.SetConfigName("app") // Имя файла без расширения
-	viper.SetConfigType("env") // Формат файла — .env
+	viper.SetConfigName(fileName) // Имя файла без расширения
+	viper.SetConfigType("env")    // Формат файла — .env
 
 	// Поддержка переменных окружения (опционально)
 	viper.AutomaticEnv()
