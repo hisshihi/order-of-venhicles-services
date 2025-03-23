@@ -10,6 +10,23 @@ import (
 	"database/sql"
 )
 
+const changePassword = `-- name: ChangePassword :exec
+UPDATE users
+SET password_hash = $2,
+    password_change_at = NOW()
+WHERE id = $1
+`
+
+type ChangePasswordParams struct {
+	ID           int64  `json:"id"`
+	PasswordHash string `json:"password_hash"`
+}
+
+func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) error {
+	_, err := q.db.ExecContext(ctx, changePassword, arg.ID, arg.PasswordHash)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
         username,
@@ -422,6 +439,7 @@ SET username = $2,
     district = $6,
     phone = $7,
     whatsapp = $8,
+    photo_url = $9,
     updated_at = NOW()
 WHERE id = $1
 RETURNING id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
@@ -436,6 +454,7 @@ type UpdateUserParams struct {
 	District sql.NullString `json:"district"`
 	Phone    string         `json:"phone"`
 	Whatsapp string         `json:"whatsapp"`
+	PhotoUrl []byte         `json:"photo_url"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -448,6 +467,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.District,
 		arg.Phone,
 		arg.Whatsapp,
+		arg.PhotoUrl,
 	)
 	var i User
 	err := row.Scan(

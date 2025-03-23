@@ -73,10 +73,17 @@ SET username = $2,
     district = $6,
     phone = $7,
     whatsapp = $8,
+    photo_url = $9,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
 -- name: DeleteUser :exec
 DELETE FROM users
+WHERE id = $1;
+
+-- name: ChangePassword :exec
+UPDATE users
+SET password_hash = $2,
+    password_change_at = NOW()
 WHERE id = $1;

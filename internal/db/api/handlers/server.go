@@ -130,6 +130,8 @@ func (server *Server) setupServer() {
 		string(sqlc.RoleAdmin),
 	))
 	// Добавьте здесь маршруты для клиентов
+	clientRoutes.PUT("users/update", server.updateUser)
+	clientRoutes.POST("users/change-password", server.changePassword)
 	clientRoutes.POST("/orders", server.createOrder)
 	clientRoutes.GET("/orders/:id", server.getOrderByID)
 	clientRoutes.POST("/orders/:id/status", server.updateOrderStatus)

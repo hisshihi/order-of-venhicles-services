@@ -14,6 +14,7 @@ type Querier interface {
 	AcceptOrderByProviderID(ctx context.Context, arg AcceptOrderByProviderIDParams) (Order, error)
 	// Добавляет услугодателя в избранное клиента
 	AddProviderToFavorites(ctx context.Context, arg AddProviderToFavoritesParams) (Favorite, error)
+	ChangePassword(ctx context.Context, arg ChangePasswordParams) error
 	CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Subscription, error)
 	// Проверяет, оставил ли клиент отзыв по данному заказу
 	CheckIfClientReviewedOrder(ctx context.Context, arg CheckIfClientReviewedOrderParams) (bool, error)

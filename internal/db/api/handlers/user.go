@@ -5,11 +5,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/hisshihi/order-of-venhicles-services/db/sqlc"
 	"github.com/hisshihi/order-of-venhicles-services/pkg/util"
 	"github.com/lib/pq"
@@ -69,7 +71,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 
 	var photoBytes []byte
 	if req.PhotoUrl != nil {
-		if req.PhotoUrl.Size > 1<<29 {
+		if req.PhotoUrl.Size > 1<<20 {
 			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 1МБ")))
 			return
 		}
@@ -283,6 +285,7 @@ func (server *Server) logoutUser(ctx *gin.Context) {
 }
 
 type getCurrentUserResponse struct {
+	ID       int64  `json:"id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Country  string `json:"country,omitempty"`
@@ -302,6 +305,7 @@ func (server *Server) getCurrentUser(ctx *gin.Context) {
 
 	// Создаем безопасный ответ без хеша пароля
 	rsp := getCurrentUserResponse{
+		ID:       user.ID,
 		Email:    user.Email,
 		Username: user.Username,
 		Country:  user.Country.String,
@@ -434,9 +438,149 @@ func (server *Server) profileUser(ctx *gin.Context) {
 		Whatsapp:      user.Whatsapp,
 		CreatedAt:     user.CreatedAt,
 		AverageRating: averageRating,
-		AllRating: allRating,
+		AllRating:     allRating,
 	}
 
 	ctx.JSON(http.StatusOK, userResponse)
 
+}
+
+type updateUserRequest struct {
+	Username string                `form:"username" binding:"required"`
+	Email    string                `form:"email" binding:"required,email"`
+	Country  *string               `form:"country,omitempty"`
+	City     *string               `form:"city,omitempty"`
+	District *string               `form:"district,omitempty"`
+	Phone    string                `form:"phone" binding:"required"`
+	Whatsapp string                `form:"whatsapp" binding:"required"`
+	PhotoUrl *multipart.FileHeader `form:"photo_url"`
+}
+
+// Обнолвение пользователя
+func (server *Server) updateUser(ctx *gin.Context) {
+	var req updateUserRequest
+	if err := ctx.ShouldBindWith(&req, binding.FormMultipart); err != nil {
+		log.Println("Ошибка привязки:", err)
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		return
+	}
+
+	var photoBytes []byte
+	if req.PhotoUrl.Header != nil {
+		if req.PhotoUrl != nil {
+			log.Println("Файл загружен:", req.PhotoUrl.Filename)
+			if req.PhotoUrl.Size > 1<<20 {
+				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 1МБ")))
+				return
+			}
+
+			file, err := req.PhotoUrl.Open()
+			if err != nil {
+				log.Println("Ошибка открытия файла:", err)
+				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+				return
+			}
+			defer file.Close()
+
+			photoBytes, err = io.ReadAll(file)
+			if err != nil {
+				log.Println("Ошибка чтения файла:", err)
+				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+				return
+			}
+			log.Println("Размер файла:", len(photoBytes))
+		} else {
+			log.Println("Файл не передан")
+			photoBytes = user.PhotoUrl
+		}
+	} else {
+		photoBytes = user.PhotoUrl
+	}
+
+	arg := sqlc.UpdateUserParams{
+		ID:       user.ID,
+		Username: req.Username,
+		Email:    req.Email,
+		Country:  sql.NullString{String: *req.Country, Valid: req.Country != nil},
+		City:     sql.NullString{String: *req.City, Valid: req.City != nil},
+		District: sql.NullString{String: *req.District, Valid: req.District != nil},
+		Phone:    req.Phone,
+		Whatsapp: req.Whatsapp,
+		PhotoUrl: photoBytes,
+	}
+
+	updateUser, err := server.store.UpdateUser(ctx, arg)
+	if err != nil {
+		log.Println("Ошибка обновления:", err)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	rsp := getCurrentUserResponse{
+		ID:       updateUser.ID,
+		Username: updateUser.Username,
+		Email:    updateUser.Email,
+		Country:  updateUser.Country.String,
+		City:     updateUser.City.String,
+		District: updateUser.District.String,
+		Phone:    updateUser.Phone,
+		Whatsapp: updateUser.Whatsapp,
+		PhotoUrl: base64.StdEncoding.EncodeToString(updateUser.PhotoUrl),
+		Role:     string(updateUser.Role.Role),
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"user": rsp,
+	})
+}
+
+type changePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required,min=6"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}
+
+// Обновление пароля
+func (server *Server) changePassword(ctx *gin.Context) {
+	var req changePasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		return
+	}
+
+	err = util.CheckPassword(req.OldPassword, user.PasswordHash)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("пароли не совпадают")))
+		return
+	}
+
+	newHashedPassword, err := util.HashPassword(req.NewPassword)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.ChangePasswordParams{
+		ID: user.ID,
+		PasswordHash: newHashedPassword,
+	}
+
+	err = server.store.ChangePassword(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Пароль успешно изменён",
+	})
 }
