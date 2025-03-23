@@ -3,11 +3,10 @@
 INSERT INTO "reviews" (
         client_id,
         provider_id,
-        order_id,
         rating,
         comment
     )
-VALUES ($1, $2, $3, $4, $5)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetReviewsByProviderID :many
@@ -30,7 +29,6 @@ LIMIT $2 OFFSET $3;
 SELECT r.id,
     r.client_id,
     r.provider_id,
-    r.order_id,
     r.rating,
     r.comment,
     r.created_at,
@@ -60,5 +58,5 @@ SELECT EXISTS(
         SELECT 1
         FROM "reviews"
         WHERE client_id = $1
-            AND order_id = $2
+            AND provider_id = $2
     ) as has_review;

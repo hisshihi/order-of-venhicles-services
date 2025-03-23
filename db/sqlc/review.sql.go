@@ -16,18 +16,18 @@ SELECT EXISTS(
         SELECT 1
         FROM "reviews"
         WHERE client_id = $1
-            AND order_id = $2
+            AND provider_id = $2
     ) as has_review
 `
 
 type CheckIfClientReviewedOrderParams struct {
-	ClientID int64 `json:"client_id"`
-	OrderID  int64 `json:"order_id"`
+	ClientID   int64 `json:"client_id"`
+	ProviderID int64 `json:"provider_id"`
 }
 
 // Проверяет, оставил ли клиент отзыв по данному заказу
 func (q *Queries) CheckIfClientReviewedOrder(ctx context.Context, arg CheckIfClientReviewedOrderParams) (bool, error) {
-	row := q.db.QueryRowContext(ctx, checkIfClientReviewedOrder, arg.ClientID, arg.OrderID)
+	row := q.db.QueryRowContext(ctx, checkIfClientReviewedOrder, arg.ClientID, arg.ProviderID)
 	var has_review bool
 	err := row.Scan(&has_review)
 	return has_review, err
@@ -37,18 +37,16 @@ const createReview = `-- name: CreateReview :one
 INSERT INTO "reviews" (
         client_id,
         provider_id,
-        order_id,
         rating,
         comment
     )
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, order_id, client_id, provider_id, rating, comment, created_at, updated_at
+VALUES ($1, $2, $3, $4)
+RETURNING id, client_id, provider_id, rating, comment, created_at, updated_at
 `
 
 type CreateReviewParams struct {
 	ClientID   int64  `json:"client_id"`
 	ProviderID int64  `json:"provider_id"`
-	OrderID    int64  `json:"order_id"`
 	Rating     int32  `json:"rating"`
 	Comment    string `json:"comment"`
 }
@@ -58,14 +56,12 @@ func (q *Queries) CreateReview(ctx context.Context, arg CreateReviewParams) (Rev
 	row := q.db.QueryRowContext(ctx, createReview,
 		arg.ClientID,
 		arg.ProviderID,
-		arg.OrderID,
 		arg.Rating,
 		arg.Comment,
 	)
 	var i Review
 	err := row.Scan(
 		&i.ID,
-		&i.OrderID,
 		&i.ClientID,
 		&i.ProviderID,
 		&i.Rating,
@@ -117,7 +113,6 @@ const getReviewByID = `-- name: GetReviewByID :one
 SELECT r.id,
     r.client_id,
     r.provider_id,
-    r.order_id,
     r.rating,
     r.comment,
     r.created_at,
@@ -133,7 +128,6 @@ type GetReviewByIDRow struct {
 	ID           int64     `json:"id"`
 	ClientID     int64     `json:"client_id"`
 	ProviderID   int64     `json:"provider_id"`
-	OrderID      int64     `json:"order_id"`
 	Rating       int32     `json:"rating"`
 	Comment      string    `json:"comment"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -149,7 +143,6 @@ func (q *Queries) GetReviewByID(ctx context.Context, id int64) (GetReviewByIDRow
 		&i.ID,
 		&i.ClientID,
 		&i.ProviderID,
-		&i.OrderID,
 		&i.Rating,
 		&i.Comment,
 		&i.CreatedAt,

@@ -275,7 +275,6 @@ type PromoCode struct {
 
 type Review struct {
 	ID         int64     `json:"id"`
-	OrderID    int64     `json:"order_id"`
 	ClientID   int64     `json:"client_id"`
 	ProviderID int64     `json:"provider_id"`
 	Rating     int32     `json:"rating"`

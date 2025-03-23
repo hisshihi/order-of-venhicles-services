@@ -13,14 +13,13 @@ import (
 )
 
 type reviewCreateRequest struct {
-	OrderID int64  `json:"order_id" binding:"min=1,required"`
+	ProviderID int64  `json:"provider_id" binding:"min=1,required"`
 	Rating  int32  `json:"rating" binding:"min=1,max=5,required"`
 	Comment string `json:"comment" binding:"required,min=10"`
 }
 
 type reviewCreateResponse struct {
 	ID         int64  `json:"id"`
-	OrderID    int64  `json:"order_id"`
 	ClientID   int64  `json:"client_id"`
 	ProviderID int64  `json:"provider_id"`
 	Rating     int32  `json:"rating"`
@@ -39,32 +38,9 @@ func (server *Server) createReview(ctx *gin.Context) {
 		return
 	}
 
-	order, err := server.store.GetOrderByID(ctx, req.OrderID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(errors.New("заказ не найден")))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
-	if order.ClientID != user.ID {
-		ctx.JSON(http.StatusForbidden,
-			errorResponse(errors.New("вы можете оставлять отзывы только на свои заказы")))
-		return
-	}
-
-	service, err := server.store.GetServiceByID(ctx, order.ServiceID.Int64)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
-
 	arg := sqlc.CreateReviewParams{
-		OrderID:    order.ID,
 		ClientID:   user.ID,
-		ProviderID: service.ProviderID,
+		ProviderID: req.ProviderID,
 		Rating:     req.Rating,
 		Comment:    req.Comment,
 	}
@@ -90,7 +66,6 @@ func (server *Server) createReview(ctx *gin.Context) {
 
 	rsp := reviewCreateResponse{
 		ID:         review.ID,
-		OrderID:    review.OrderID,
 		ClientID:   review.ClientID,
 		ProviderID: review.ProviderID,
 		Rating:     review.Rating,
