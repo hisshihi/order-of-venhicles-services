@@ -424,6 +424,7 @@ func (server *Server) profileUser(ctx *gin.Context) {
 		District      string                              `json:"district,omitempty"`
 		Phone         string                              `json:"phone"`
 		Whatsapp      string                              `json:"whatsapp"`
+		PhotoUrl      string                              `json:"photo_url"`
 		CreatedAt     time.Time                           `json:"created_at"`
 		AverageRating sqlc.GetAverageRatingForProviderRow `json:"average_rating"`
 		AllRating     []sqlc.GetReviewsByProviderIDRow    `json:"all_rating"`
@@ -436,6 +437,7 @@ func (server *Server) profileUser(ctx *gin.Context) {
 		District:      user.District.String,
 		Phone:         user.Phone,
 		Whatsapp:      user.Whatsapp,
+		PhotoUrl:      base64.StdEncoding.EncodeToString(user.PhotoUrl),
 		CreatedAt:     user.CreatedAt,
 		AverageRating: averageRating,
 		AllRating:     allRating,
@@ -570,7 +572,7 @@ func (server *Server) changePassword(ctx *gin.Context) {
 	}
 
 	arg := sqlc.ChangePasswordParams{
-		ID: user.ID,
+		ID:           user.ID,
 		PasswordHash: newHashedPassword,
 	}
 

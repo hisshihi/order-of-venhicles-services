@@ -91,7 +91,7 @@ func (server *Server) setupServer() {
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
+		MaxAge:           1222222 * time.Hour,
 	}
 	router.Use(cors.New(corsConfig))
 
@@ -117,7 +117,6 @@ func (server *Server) setupServer() {
 	authRoutes := apiGroup.Group("/auth")
 	authRoutes.Use(server.authMiddleware())
 	authRoutes.GET("/users/me", server.getCurrentUser)
-	authRoutes.GET("/profile", server.profileUser)
 
 	// Защищённые маршруты с ролевым доступом
 	// Маршруты для клиентов
@@ -131,6 +130,7 @@ func (server *Server) setupServer() {
 	))
 	// Добавьте здесь маршруты для клиентов
 	clientRoutes.PUT("users/update", server.updateUser)
+	clientRoutes.GET("/users/profile", server.profileUser)
 	clientRoutes.POST("users/change-password", server.changePassword)
 	clientRoutes.POST("/orders", server.createOrder)
 	clientRoutes.GET("/orders/:id", server.getOrderByID)
