@@ -275,7 +275,7 @@ func (q *Queries) GetOrderResponsesByProviderId(ctx context.Context, arg GetOrde
 }
 
 const getOrdersWithResponsesByProvider = `-- name: GetOrdersWithResponsesByProvider :many
-SELECT DISTINCT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date, o.selected_provider_id, u.username AS client_username, sc.name AS category_name
+SELECT DISTINCT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date, o.selected_provider_id, o.subtitle_category_id, u.username AS client_username, sc.name AS category_name
 FROM orders o
 JOIN users u ON o.client_id = u.id
 JOIN service_categories sc ON o.category_id = sc.id
@@ -304,6 +304,7 @@ type GetOrdersWithResponsesByProviderRow struct {
 	ClientMessage      sql.NullString   `json:"client_message"`
 	OrderDate          sql.NullTime     `json:"order_date"`
 	SelectedProviderID sql.NullInt64    `json:"selected_provider_id"`
+	SubtitleCategoryID sql.NullInt64    `json:"subtitle_category_id"`
 	ClientUsername     string           `json:"client_username"`
 	CategoryName       string           `json:"category_name"`
 }
@@ -333,6 +334,7 @@ func (q *Queries) GetOrdersWithResponsesByProvider(ctx context.Context, arg GetO
 			&i.ClientMessage,
 			&i.OrderDate,
 			&i.SelectedProviderID,
+			&i.SubtitleCategoryID,
 			&i.ClientUsername,
 			&i.CategoryName,
 		); err != nil {
@@ -350,7 +352,7 @@ func (q *Queries) GetOrdersWithResponsesByProvider(ctx context.Context, arg GetO
 }
 
 const getOrdersWithSelectedProvider = `-- name: GetOrdersWithSelectedProvider :many
-SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date, o.selected_provider_id, u.username AS client_username, u.phone AS client_phone, u.whatsapp AS client_whatsapp,
+SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date, o.selected_provider_id, o.subtitle_category_id, u.username AS client_username, u.phone AS client_phone, u.whatsapp AS client_whatsapp,
        sc.name AS category_name, p.username AS provider_username
 FROM orders o
 JOIN users u ON o.client_id = u.id
@@ -379,6 +381,7 @@ type GetOrdersWithSelectedProviderRow struct {
 	ClientMessage      sql.NullString   `json:"client_message"`
 	OrderDate          sql.NullTime     `json:"order_date"`
 	SelectedProviderID sql.NullInt64    `json:"selected_provider_id"`
+	SubtitleCategoryID sql.NullInt64    `json:"subtitle_category_id"`
 	ClientUsername     string           `json:"client_username"`
 	ClientPhone        string           `json:"client_phone"`
 	ClientWhatsapp     string           `json:"client_whatsapp"`
@@ -411,6 +414,7 @@ func (q *Queries) GetOrdersWithSelectedProvider(ctx context.Context, arg GetOrde
 			&i.ClientMessage,
 			&i.OrderDate,
 			&i.SelectedProviderID,
+			&i.SubtitleCategoryID,
 			&i.ClientUsername,
 			&i.ClientPhone,
 			&i.ClientWhatsapp,
@@ -527,7 +531,7 @@ SET
     status = 'accepted',
     updated_at = now()
 WHERE id = (SELECT order_id FROM selected_response)
-RETURNING id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date, selected_provider_id
+RETURNING id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date, selected_provider_id, subtitle_category_id
 `
 
 // Выбирает провайдера для выполнения заказа (транзакционный запрос)
@@ -550,6 +554,7 @@ func (q *Queries) SelectProviderForOrder(ctx context.Context, dollar_1 sql.NullI
 		&i.ClientMessage,
 		&i.OrderDate,
 		&i.SelectedProviderID,
+		&i.SubtitleCategoryID,
 	)
 	return i, err
 }

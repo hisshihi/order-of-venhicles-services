@@ -214,6 +214,7 @@ type Order struct {
 	ClientMessage      sql.NullString   `json:"client_message"`
 	OrderDate          sql.NullTime     `json:"order_date"`
 	SelectedProviderID sql.NullInt64    `json:"selected_provider_id"`
+	SubtitleCategoryID sql.NullInt64    `json:"subtitle_category_id"`
 }
 
 type OrderResponse struct {
@@ -284,18 +285,19 @@ type Review struct {
 }
 
 type Service struct {
-	ID          int64          `json:"id"`
-	ProviderID  int64          `json:"provider_id"`
-	CategoryID  int64          `json:"category_id"`
-	Title       string         `json:"title"`
-	Description string         `json:"description"`
-	Price       string         `json:"price"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	Subcategory sql.NullString `json:"subcategory"`
-	Country     sql.NullString `json:"country"`
-	City        sql.NullString `json:"city"`
-	District    sql.NullString `json:"district"`
+	ID                 int64          `json:"id"`
+	ProviderID         int64          `json:"provider_id"`
+	CategoryID         int64          `json:"category_id"`
+	Title              string         `json:"title"`
+	Description        string         `json:"description"`
+	Price              string         `json:"price"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+	Subcategory        sql.NullString `json:"subcategory"`
+	Country            sql.NullString `json:"country"`
+	City               sql.NullString `json:"city"`
+	District           sql.NullString `json:"district"`
+	SubtitleCategoryID sql.NullInt64  `json:"subtitle_category_id"`
 }
 
 type ServiceCategory struct {
@@ -320,6 +322,13 @@ type Subscription struct {
 	Price            sql.NullString         `json:"price"`
 	PromoCodeID      sql.NullInt64          `json:"promo_code_id"`
 	OriginalPrice    sql.NullString         `json:"original_price"`
+}
+
+type SubtitleCategory struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type User struct {

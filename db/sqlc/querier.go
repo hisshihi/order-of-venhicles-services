@@ -40,6 +40,7 @@ type Querier interface {
 	CreateService(ctx context.Context, arg CreateServiceParams) (Service, error)
 	CreateServiceCategory(ctx context.Context, arg CreateServiceCategoryParams) (ServiceCategory, error)
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error)
+	CreateSubtitle(ctx context.Context, name string) (SubtitleCategory, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteOrder(ctx context.Context, id int64) error
 	// Удаляет отклик по его ID
@@ -54,6 +55,7 @@ type Querier interface {
 	DeleteService(ctx context.Context, arg DeleteServiceParams) error
 	DeleteServiceCategory(ctx context.Context, id int64) error
 	DeleteSubscription(ctx context.Context, id int64) error
+	DeleteSubtitleCategory(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
 	GetActiveSubscriptionForProvider(ctx context.Context, providerID int64) (Subscription, error)
 	// Получает всех поставщиков, которые использовали данный промокод
@@ -145,6 +147,7 @@ type Querier interface {
 	ListServicesByProviderIDAndCategory(ctx context.Context, arg ListServicesByProviderIDAndCategoryParams) ([]ListServicesByProviderIDAndCategoryRow, error)
 	ListSubscriptions(ctx context.Context, arg ListSubscriptionsParams) ([]Subscription, error)
 	ListSubscriptionsByProviderID(ctx context.Context, arg ListSubscriptionsByProviderIDParams) ([]Subscription, error)
+	ListSubtitleCategory(ctx context.Context) ([]SubtitleCategory, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	ListUsersByEmail(ctx context.Context, dollar_1 sql.NullString) ([]User, error)
 	ListUsersByRole(ctx context.Context, role NullRole) ([]User, error)
@@ -176,6 +179,7 @@ type Querier interface {
 	UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error)
 	UpdateServiceCategory(ctx context.Context, arg UpdateServiceCategoryParams) (ServiceCategory, error)
 	UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error)
+	UpdateSubtitleCategory(ctx context.Context, arg UpdateSubtitleCategoryParams) (SubtitleCategory, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 
