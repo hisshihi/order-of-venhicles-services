@@ -37,6 +37,23 @@ func (q *Queries) DeleteSubtitleCategory(ctx context.Context, id int64) error {
 	return err
 }
 
+const getSubtitleCategoryByID = `-- name: GetSubtitleCategoryByID :one
+SELECT id, name, created_at, updated_at FROM subtitle_category
+WHERE id = $1
+`
+
+func (q *Queries) GetSubtitleCategoryByID(ctx context.Context, id int64) (SubtitleCategory, error) {
+	row := q.db.QueryRowContext(ctx, getSubtitleCategoryByID, id)
+	var i SubtitleCategory
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listSubtitleCategory = `-- name: ListSubtitleCategory :many
 SELECT id, name, created_at, updated_at FROM subtitle_category
 ORDER BY name ASC

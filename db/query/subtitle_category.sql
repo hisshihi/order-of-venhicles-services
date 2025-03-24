@@ -3,6 +3,10 @@ INSERT INTO subtitle_category (name)
 VALUES ($1)
 RETURNING *;
 
+-- name: GetSubtitleCategoryByID :one
+SELECT * FROM subtitle_category
+WHERE id = $1;
+
 -- name: ListSubtitleCategory :many
 SELECT * FROM subtitle_category
 ORDER BY name ASC;

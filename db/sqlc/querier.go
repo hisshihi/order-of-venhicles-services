@@ -117,6 +117,7 @@ type Querier interface {
 	GetServicesByProviderID(ctx context.Context, arg GetServicesByProviderIDParams) ([]GetServicesByProviderIDRow, error)
 	GetSubscriptionByID(ctx context.Context, id int64) (Subscription, error)
 	GetSubscriptionByProviderID(ctx context.Context, providerID int64) (Subscription, error)
+	GetSubtitleCategoryByID(ctx context.Context, id int64) (SubtitleCategory, error)
 	// Получает количество непрочитанных сообщений для пользователя
 	GetUnreadMessagesCount(ctx context.Context, receiverID int64) (int64, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)

@@ -2,6 +2,7 @@
 INSERT INTO "services" (
         provider_id,
         category_id,
+        subtitle_category_id,
         subcategory,
         title,
         description,
@@ -10,7 +11,7 @@ INSERT INTO "services" (
         city,
         district
     )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 -- name: GetServiceByID :one
 SELECT s.*,
@@ -51,6 +52,7 @@ SET category_id = $3,
     country = $8,
     city = $9,
     district = $10,
+    subtitle_category_id = $11,
     updated_at = NOW()
 WHERE id = $1
     AND provider_id = $2

@@ -27,6 +27,7 @@ const createService = `-- name: CreateService :one
 INSERT INTO "services" (
         provider_id,
         category_id,
+        subtitle_category_id,
         subcategory,
         title,
         description,
@@ -35,26 +36,28 @@ INSERT INTO "services" (
         city,
         district
     )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING id, provider_id, category_id, title, description, price, created_at, updated_at, subcategory, country, city, district, subtitle_category_id
 `
 
 type CreateServiceParams struct {
-	ProviderID  int64          `json:"provider_id"`
-	CategoryID  int64          `json:"category_id"`
-	Subcategory sql.NullString `json:"subcategory"`
-	Title       string         `json:"title"`
-	Description string         `json:"description"`
-	Price       string         `json:"price"`
-	Country     sql.NullString `json:"country"`
-	City        sql.NullString `json:"city"`
-	District    sql.NullString `json:"district"`
+	ProviderID         int64          `json:"provider_id"`
+	CategoryID         int64          `json:"category_id"`
+	SubtitleCategoryID sql.NullInt64  `json:"subtitle_category_id"`
+	Subcategory        sql.NullString `json:"subcategory"`
+	Title              string         `json:"title"`
+	Description        string         `json:"description"`
+	Price              string         `json:"price"`
+	Country            sql.NullString `json:"country"`
+	City               sql.NullString `json:"city"`
+	District           sql.NullString `json:"district"`
 }
 
 func (q *Queries) CreateService(ctx context.Context, arg CreateServiceParams) (Service, error) {
 	row := q.db.QueryRowContext(ctx, createService,
 		arg.ProviderID,
 		arg.CategoryID,
+		arg.SubtitleCategoryID,
 		arg.Subcategory,
 		arg.Title,
 		arg.Description,
@@ -668,6 +671,7 @@ SET category_id = $3,
     country = $8,
     city = $9,
     district = $10,
+    subtitle_category_id = $11,
     updated_at = NOW()
 WHERE id = $1
     AND provider_id = $2
@@ -675,16 +679,17 @@ RETURNING id, provider_id, category_id, title, description, price, created_at, u
 `
 
 type UpdateServiceParams struct {
-	ID          int64          `json:"id"`
-	ProviderID  int64          `json:"provider_id"`
-	CategoryID  int64          `json:"category_id"`
-	Subcategory sql.NullString `json:"subcategory"`
-	Title       string         `json:"title"`
-	Description string         `json:"description"`
-	Price       string         `json:"price"`
-	Country     sql.NullString `json:"country"`
-	City        sql.NullString `json:"city"`
-	District    sql.NullString `json:"district"`
+	ID                 int64          `json:"id"`
+	ProviderID         int64          `json:"provider_id"`
+	CategoryID         int64          `json:"category_id"`
+	Subcategory        sql.NullString `json:"subcategory"`
+	Title              string         `json:"title"`
+	Description        string         `json:"description"`
+	Price              string         `json:"price"`
+	Country            sql.NullString `json:"country"`
+	City               sql.NullString `json:"city"`
+	District           sql.NullString `json:"district"`
+	SubtitleCategoryID sql.NullInt64  `json:"subtitle_category_id"`
 }
 
 func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (Service, error) {
@@ -699,6 +704,7 @@ func (q *Queries) UpdateService(ctx context.Context, arg UpdateServiceParams) (S
 		arg.Country,
 		arg.City,
 		arg.District,
+		arg.SubtitleCategoryID,
 	)
 	var i Service
 	err := row.Scan(

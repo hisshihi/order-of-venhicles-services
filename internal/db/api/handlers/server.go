@@ -105,7 +105,7 @@ func (server *Server) setupServer() {
 	apiGroup := router.Group("/api/v1")
 
 	// Публичные API маршруты (без авторизации)
-	apiGroup.POST("/users", server.createUser)
+	apiGroup.POST("/create-user", server.createUser)
 	apiGroup.POST("/users/login", server.loginUser)
 	apiGroup.POST("/users/logout", server.logoutUser)
 	apiGroup.GET("/categories", server.listCategory)
@@ -129,6 +129,7 @@ func (server *Server) setupServer() {
 		string(sqlc.RoleAdmin),
 	))
 	// Добавьте здесь маршруты для клиентов
+	clientRoutes.GET("/subcategories", server.listSubtitleCategory)
 	clientRoutes.PUT("users/update", server.updateUser)
 	clientRoutes.GET("/users/profile", server.profileUser)
 	clientRoutes.POST("users/change-password", server.changePassword)
@@ -195,6 +196,9 @@ func (server *Server) setupServer() {
 	adminRoutes.POST("/category", server.createCategory)
 	adminRoutes.PUT("/category/:id", server.updateCategory)
 	adminRoutes.DELETE("/category/:id", server.deleteCategory)
+	adminRoutes.POST("/subtitle-category", server.createSubtitleCategory)
+	adminRoutes.PUT("/subtitle-category", server.updateSubtitleCategory)
+	adminRoutes.DELETE("/subtitle-category/:id", server.deleteSubtitleCategory)
 
 	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
 	// ----------------------------------------------------

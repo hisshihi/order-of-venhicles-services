@@ -12,37 +12,40 @@ import (
 )
 
 type createServiceRequest struct {
-	CategoryID  int64  `json:"category_id" binding:"required"`
-	Title       string `json:"title" binding:"required,min=5"`
-	Description string `json:"description" binding:"required"`
-	Price       string `json:"price" binding:"required"`
-	Country     string `json:"country" binding:"required"`
-	City        string `json:"city" binding:"required"`
-	District    string `json:"district" binding:"required"`
+	CategoryID    int64  `json:"category_id" binding:"required,min=1"`
+	SubCategoryID int64  `json:"sub_category_id" binding:"required,min=1"`
+	Title         string `json:"title" binding:"required,min=5"`
+	Description   string `json:"description" binding:"required"`
+	Price         string `json:"price" binding:"required"`
+	Country       string `json:"country" binding:"required"`
+	City          string `json:"city" binding:"required"`
+	District      string `json:"district" binding:"required"`
 }
 
 type createServiceResponse struct {
-	ID               int64   `json:"id"`
-	ProviderID       int64   `json:"provider_id"`
-	CategoryID       int64   `json:"category_id"`
-	Title            string  `json:"title"`
-	Description      string  `json:"description"`
-	Price            string  `json:"price"`
-	Country          string  `json:"country" binding:"required"`
-	City             string  `json:"city" binding:"required"`
-	District         string  `json:"district"`
-	ProviderName     string  `json:"provider_name"`
-	ProviderPhoto    string  `json:"provider_photo"`
-	ProviderPhone    string  `json:"provider_phone"`
-	ProviderWhatsapp string  `json:"provider_whatsapp"`
-	CategoryName     string  `json:"category_name"`
-	ReviewsCount     int64   `json:"reviews_count"`
-	AverageRating    float64 `json:"average_rating"`
-	ServiceCount serviceCountResponse `json:"service_count"`
+	ID               int64                `json:"id"`
+	ProviderID       int64                `json:"provider_id"`
+	CategoryID       int64                `json:"category_id"`
+	SubCategoryID    int64                `json:"sub_category_id"`
+	SubCategory      string               `json:"subcategory"`
+	Title            string               `json:"title"`
+	Description      string               `json:"description"`
+	Price            string               `json:"price"`
+	Country          string               `json:"country" binding:"required"`
+	City             string               `json:"city" binding:"required"`
+	District         string               `json:"district"`
+	ProviderName     string               `json:"provider_name"`
+	ProviderPhoto    string               `json:"provider_photo"`
+	ProviderPhone    string               `json:"provider_phone"`
+	ProviderWhatsapp string               `json:"provider_whatsapp"`
+	CategoryName     string               `json:"category_name"`
+	ReviewsCount     int64                `json:"reviews_count"`
+	AverageRating    float64              `json:"average_rating"`
+	ServiceCount     serviceCountResponse `json:"service_count"`
 }
 
 type serviceCountResponse struct {
-	ServiceCount     int     `json:"service_count"`
+	ServiceCount int `json:"service_count"`
 }
 
 func (server *Server) createService(ctx *gin.Context) {
@@ -58,15 +61,27 @@ func (server *Server) createService(ctx *gin.Context) {
 		return
 	}
 
+	subcategory, err := server.store.GetSubtitleCategoryByID(ctx, req.SubCategoryID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	arg := sqlc.CreateServiceParams{
-		ProviderID:  user.ID,
-		CategoryID:  req.CategoryID,
-		Title:       req.Title,
-		Description: req.Description,
-		Price:       req.Price,
-		Country:     sql.NullString{String: req.Country, Valid: true},
-		City:        sql.NullString{String: req.City, Valid: true},
-		District:    sql.NullString{String: req.District, Valid: true},
+		ProviderID:         user.ID,
+		CategoryID:         req.CategoryID,
+		SubtitleCategoryID: sql.NullInt64{Int64: subcategory.ID, Valid: true},
+		Subcategory:        sql.NullString{String: subcategory.Name, Valid: true},
+		Title:              req.Title,
+		Description:        req.Description,
+		Price:              req.Price,
+		Country:            sql.NullString{String: req.Country, Valid: true},
+		City:               sql.NullString{String: req.City, Valid: true},
+		District:           sql.NullString{String: req.District, Valid: true},
 	}
 
 	service, err := server.store.CreateService(ctx, arg)
@@ -83,15 +98,17 @@ func (server *Server) createService(ctx *gin.Context) {
 	}
 
 	rsp := createServiceResponse{
-		ID:          service.ID,
-		ProviderID:  service.ProviderID,
-		CategoryID:  service.CategoryID,
-		Title:       service.Title,
-		Description: service.Description,
-		Price:       service.Price,
-		Country:     service.Country.String,
-		City:        service.City.String,
-		District:    service.District.String,
+		ID:            service.ID,
+		ProviderID:    service.ProviderID,
+		SubCategoryID: service.SubtitleCategoryID.Int64,
+		SubCategory:   service.Subcategory.String,
+		CategoryID:    service.CategoryID,
+		Title:         service.Title,
+		Description:   service.Description,
+		Price:         service.Price,
+		Country:       service.Country.String,
+		City:          service.City.String,
+		District:      service.District.String,
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
@@ -124,13 +141,15 @@ func (server *Server) getServiceByProviderID(ctx *gin.Context) {
 	}
 
 	rsp := createServiceResponse{
-		ID:          service.ID,
-		ProviderID:  service.ProviderID,
-		CategoryID:  service.CategoryID,
-		Title:       service.Title,
-		Description: service.Description,
-		Price:       service.Price,
-		ServiceCount: serviceCount,
+		ID:            service.ID,
+		ProviderID:    service.ProviderID,
+		SubCategoryID: service.SubtitleCategoryID.Int64,
+		SubCategory:   service.Subcategory.String,
+		CategoryID:    service.CategoryID,
+		Title:         service.Title,
+		Description:   service.Description,
+		Price:         service.Price,
+		ServiceCount:  serviceCount,
 	}
 
 	ctx.JSON(http.StatusOK, rsp)
@@ -189,8 +208,8 @@ func (server *Server) listServiceByProviderID(ctx *gin.Context) {
 }
 
 type listServiceFromProviderResponse struct {
-	Services []sqlc.GetServicesByProviderIDRow `json:"services"`
-	CountService int `json:"count_service"`
+	Services     []sqlc.GetServicesByProviderIDRow `json:"services"`
+	CountService int                               `json:"count_service"`
 }
 
 type listServicesFromProviderRequest struct {
@@ -234,7 +253,7 @@ func (server *Server) listServiceFromProvider(ctx *gin.Context) {
 	}
 
 	rsp := listServiceFromProviderResponse{
-		Services: services,
+		Services:     services,
 		CountService: int(sizeService),
 	}
 
@@ -273,7 +292,7 @@ func (server *Server) listServiceByCategoryID(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"service": services,
+		"service":      services,
 		"service_size": servicesSize,
 	})
 }
@@ -300,13 +319,14 @@ func (server *Server) listService(ctx *gin.Context) {
 }
 
 type updateServiceRequest struct {
-	CategoryID  int64  `json:"category_id" binding:"min=1,required"`
-	Title       string `json:"title" binding:"required,min=5"`
-	Description string `json:"description" binding:"required,min=10"`
-	Price       string `json:"price" binding:"required"`
-	Country     string `json:"country" binding:"required"`
-	City        string `json:"city" binding:"required"`
-	District    string `json:"district" binding:"required"`
+	CategoryID    int64  `json:"category_id" binding:"min=1,required"`
+	SubCategoryID int64  `json:"sub_category_id" binding:"min=1,required"`
+	Title         string `json:"title" binding:"required,min=5"`
+	Description   string `json:"description" binding:"required,min=10"`
+	Price         string `json:"price" binding:"required"`
+	Country       string `json:"country" binding:"required"`
+	City          string `json:"city" binding:"required"`
+	District      string `json:"district" binding:"required"`
 }
 
 func (server *Server) updateService(ctx *gin.Context) {
@@ -354,21 +374,33 @@ func (server *Server) updateService(ctx *gin.Context) {
 		return
 	}
 
+	subTitleID, err := server.store.GetSubtitleCategoryByID(ctx, req.SubCategoryID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("указанная категория не существует")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	if _, err := strconv.ParseFloat(req.Price, 64); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("некорректный формат цены")))
 		return
 	}
 
 	arg := sqlc.UpdateServiceParams{
-		ID:          service.ID,
-		ProviderID:  service.ProviderID,
-		CategoryID:  categoryID.ID,
-		Title:       req.Title,
-		Description: req.Description,
-		Price:       req.Price,
-		Country:     sql.NullString{String: req.Country, Valid: true},
-		City:        sql.NullString{String: req.City, Valid: true},
-		District:    sql.NullString{String: req.District, Valid: true},
+		ID:                 service.ID,
+		ProviderID:         service.ProviderID,
+		CategoryID:         categoryID.ID,
+		SubtitleCategoryID: sql.NullInt64{Int64: subTitleID.ID, Valid: true},
+		Subcategory:        sql.NullString{String: subTitleID.Name, Valid: true},
+		Title:              req.Title,
+		Description:        req.Description,
+		Price:              req.Price,
+		Country:            sql.NullString{String: req.Country, Valid: true},
+		City:               sql.NullString{String: req.City, Valid: true},
+		District:           sql.NullString{String: req.District, Valid: true},
 	}
 
 	updatedService, err := server.store.UpdateService(ctx, arg)
