@@ -45,6 +45,11 @@ func (server *Server) createReview(ctx *gin.Context) {
 		Comment:    req.Comment,
 	}
 
+	if user.Role.Role != sqlc.RoleClient {
+		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("только клиенты могут оставлять отзывы")))
+		return
+	}
+
 	if arg.ClientID == arg.ProviderID {
 		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("нельзя оставлять отзывы на самого себя")))
 		return
@@ -216,4 +221,41 @@ func (server *Server) getReviewsByThisProviderID(ctx *gin.Context) {
 	} else {
 		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("только услугодатель может смотреть свои отзывы")))
 	}
+}
+
+type checkReviewRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+// Проверяем, оставлял ли клжиент отзыв
+func (server *Server) checkReview(ctx *gin.Context) {
+	var req checkReviewRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.CheckIfClientReviewedOrderParams{
+		ClientID: user.ID,
+		ProviderID: req.ID,
+	}
+
+	result, err := server.store.CheckIfClientReviewedOrder(ctx, arg)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }

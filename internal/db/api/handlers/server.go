@@ -140,6 +140,7 @@ func (server *Server) setupServer() {
 	clientRoutes.PUT("/orders/update", server.updatedOrder)
 	clientRoutes.DELETE("/orders/:id", server.deleteOrder)
 	clientRoutes.POST("/reviews", server.createReview)
+	clientRoutes.GET("/reviews/check/:id", server.checkReview)
 	clientRoutes.GET("/reviews", server.listReviewByProviderID)
 	clientRoutes.GET("/reviews/:id/rating", server.getAverageRatingForProvider)
 	clientRoutes.DELETE("/reviews/:id", server.deleteReview)

@@ -2,16 +2,18 @@
 INSERT INTO "orders" (
         client_id,
         category_id,
+        subtitle_category_id,
         status,
         client_message,
         order_date
     )
-VALUES ($1, $2, $3, $4, $5)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetOrderByID :one
 SELECT o.*,
     sc.name as category_name,
+    suc.name as subtitle_category,
     u.username as client_name,
     u.phone as client_phone,
     u.whatsapp as client_whatsapp,
@@ -23,6 +25,7 @@ SELECT o.*,
     s.title as service_title
 FROM "orders" o
     JOIN "service_categories" sc ON o.category_id = sc.id
+    JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
     JOIN "users" u ON o.client_id = u.id
     LEFT JOIN "services" s ON s.id = o.service_id
     LEFT JOIN "users" p ON s.provider_id = p.id
@@ -49,11 +52,13 @@ WHERE client_id = $1;
 -- Получает список доступных заказов для провайдера услуг
 SELECT o.*,
     sc.name as category_name,
+    suc.name as subtitle_category,
     u.username as client_name,
     u.city as client_city,
     u.district as client_district
 FROM "orders" o
     JOIN "service_categories" sc ON o.category_id = sc.id
+    JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
     JOIN "users" u ON o.client_id = u.id
 WHERE -- Заказ все еще открыт (pending)
     o.status = 'pending'
@@ -171,6 +176,7 @@ FROM provider_orders;
 UPDATE orders
 SET category_id = $2,
     client_message = $3,
+    subtitle_category_id = $4,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
@@ -183,9 +189,11 @@ WHERE id = $1;
 -- Получает список заказов по категории
 SELECT o.*,
     sc.name as category_name,
+    suc.name as subtitle_category,
     u.username as client_name
 FROM "orders" o
     JOIN "service_categories" sc ON o.category_id = sc.id
+    JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
     JOIN "users" u ON o.client_id = u.id
 WHERE o.category_id = $1
     AND o.status = 'pending'
