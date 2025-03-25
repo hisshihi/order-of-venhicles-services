@@ -85,6 +85,8 @@ type Querier interface {
 	GetOrderStatistics(ctx context.Context, dollar_1 sql.NullInt64) (GetOrderStatisticsRow, error)
 	// Получает список заказов по категории
 	GetOrdersByCategory(ctx context.Context, arg GetOrdersByCategoryParams) ([]GetOrdersByCategoryRow, error)
+	// Получает список заказов по подкатегориям
+	GetOrdersBySubCategory(ctx context.Context, arg GetOrdersBySubCategoryParams) ([]GetOrdersBySubCategoryRow, error)
 	// Получает все заказы, на которые провайдер оставил отклики (даже если не выбран)
 	// Входные параметры: ID провайдера, лимит и смещение для пагинации
 	// Возвращает: список заказов с базовой информацией о клиенте и категории
@@ -146,6 +148,7 @@ type Querier interface {
 	ListServicesByCategory(ctx context.Context, arg ListServicesByCategoryParams) ([]ListServicesByCategoryRow, error)
 	ListServicesByLocation(ctx context.Context, arg ListServicesByLocationParams) ([]ListServicesByLocationRow, error)
 	ListServicesByProviderIDAndCategory(ctx context.Context, arg ListServicesByProviderIDAndCategoryParams) ([]ListServicesByProviderIDAndCategoryRow, error)
+	ListServicesByProviderIDAndSubCategory(ctx context.Context, arg ListServicesByProviderIDAndSubCategoryParams) ([]ListServicesByProviderIDAndSubCategoryRow, error)
 	ListSubscriptions(ctx context.Context, arg ListSubscriptionsParams) ([]Subscription, error)
 	ListSubscriptionsByProviderID(ctx context.Context, arg ListSubscriptionsByProviderIDParams) ([]Subscription, error)
 	ListSubtitleCategory(ctx context.Context) ([]SubtitleCategory, error)

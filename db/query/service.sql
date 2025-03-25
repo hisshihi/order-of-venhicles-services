@@ -134,6 +134,14 @@ FROM "services" s
 WHERE s.provider_id = $1
     AND s.category_id = $2;
 
+-- name: ListServicesByProviderIDAndSubCategory :many
+SELECT s.*,
+    sc.name as subcategory_name
+FROM "services" s
+    JOIN "subtitle_category" sc ON s.subtitle_category_id = sc.id
+WHERE s.provider_id = $1
+    AND s.subtitle_category_id = $2;
+
 -- name: CountServicesByProviderID :one
 SELECT COUNT(*) FROM "services"
 WHERE provider_id = $1;

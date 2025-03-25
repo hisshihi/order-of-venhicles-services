@@ -177,6 +177,7 @@ func (server *Server) setupServer() {
 	subscriptionRequiredRoutes.GET("/orders/available", server.listAvailableOrders)
 	subscriptionRequiredRoutes.GET("/orders/statistics", server.getOrdersStatistics)
 	subscriptionRequiredRoutes.GET("/orders/category/:category_id", server.getOrdersByCategory)
+	subscriptionRequiredRoutes.GET("/orders/subcategory/:subcategory_id", server.getOrdersBySubCategory)
 
 	// Маршруты для партнеров
 	partnerRoutes := apiGroup.Group("/partner")

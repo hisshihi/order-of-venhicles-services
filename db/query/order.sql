@@ -34,10 +34,12 @@ WHERE o.id = $1;
 -- name: ListOrdersByClientID :many
 SELECT o.*,
     sc.name as category_name,
+    suc.name as subcategory_name,
     s.title as service_title,
     p.username as provider_name
 FROM "orders" o
     JOIN "service_categories" sc ON o.category_id = sc.id
+    JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
     LEFT JOIN "services" s ON o.service_id = s.id
     LEFT JOIN "users" p ON s.provider_id = p.id
 WHERE o.client_id = $1
@@ -196,6 +198,22 @@ FROM "orders" o
     JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
     JOIN "users" u ON o.client_id = u.id
 WHERE o.category_id = $1
+    AND o.status = 'pending'
+    AND o.provider_accepted = false
+ORDER BY o.created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: GetOrdersBySubCategory :many
+-- Получает список заказов по подкатегориям
+SELECT o.*,
+    sc.name as category_name,
+    suc.name as subtitle_category,
+    u.username as client_name
+FROM "orders" o
+    JOIN "service_categories" sc ON o.category_id = sc.id
+    JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
+    JOIN "users" u ON o.client_id = u.id
+WHERE o.subtitle_category_id = $1
     AND o.status = 'pending'
     AND o.provider_accepted = false
 ORDER BY o.created_at DESC

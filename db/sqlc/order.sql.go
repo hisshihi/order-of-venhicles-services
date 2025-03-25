@@ -372,6 +372,88 @@ func (q *Queries) GetOrdersByCategory(ctx context.Context, arg GetOrdersByCatego
 	return items, nil
 }
 
+const getOrdersBySubCategory = `-- name: GetOrdersBySubCategory :many
+SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date, o.selected_provider_id, o.subtitle_category_id,
+    sc.name as category_name,
+    suc.name as subtitle_category,
+    u.username as client_name
+FROM "orders" o
+    JOIN "service_categories" sc ON o.category_id = sc.id
+    JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
+    JOIN "users" u ON o.client_id = u.id
+WHERE o.subtitle_category_id = $1
+    AND o.status = 'pending'
+    AND o.provider_accepted = false
+ORDER BY o.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetOrdersBySubCategoryParams struct {
+	SubtitleCategoryID sql.NullInt64 `json:"subtitle_category_id"`
+	Limit              int64         `json:"limit"`
+	Offset             int64         `json:"offset"`
+}
+
+type GetOrdersBySubCategoryRow struct {
+	ID                 int64            `json:"id"`
+	ClientID           int64            `json:"client_id"`
+	CategoryID         int64            `json:"category_id"`
+	ServiceID          sql.NullInt64    `json:"service_id"`
+	Status             NullStatusOrders `json:"status"`
+	CreatedAt          time.Time        `json:"created_at"`
+	UpdatedAt          time.Time        `json:"updated_at"`
+	ProviderAccepted   sql.NullBool     `json:"provider_accepted"`
+	ProviderMessage    sql.NullString   `json:"provider_message"`
+	ClientMessage      sql.NullString   `json:"client_message"`
+	OrderDate          sql.NullTime     `json:"order_date"`
+	SelectedProviderID sql.NullInt64    `json:"selected_provider_id"`
+	SubtitleCategoryID sql.NullInt64    `json:"subtitle_category_id"`
+	CategoryName       string           `json:"category_name"`
+	SubtitleCategory   string           `json:"subtitle_category"`
+	ClientName         string           `json:"client_name"`
+}
+
+// Получает список заказов по подкатегориям
+func (q *Queries) GetOrdersBySubCategory(ctx context.Context, arg GetOrdersBySubCategoryParams) ([]GetOrdersBySubCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, getOrdersBySubCategory, arg.SubtitleCategoryID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetOrdersBySubCategoryRow{}
+	for rows.Next() {
+		var i GetOrdersBySubCategoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClientID,
+			&i.CategoryID,
+			&i.ServiceID,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProviderAccepted,
+			&i.ProviderMessage,
+			&i.ClientMessage,
+			&i.OrderDate,
+			&i.SelectedProviderID,
+			&i.SubtitleCategoryID,
+			&i.CategoryName,
+			&i.SubtitleCategory,
+			&i.ClientName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAvailableOrdersForProvider = `-- name: ListAvailableOrdersForProvider :many
 SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date, o.selected_provider_id, o.subtitle_category_id,
     sc.name as category_name,
@@ -499,10 +581,12 @@ func (q *Queries) ListCountOrdersByClientID(ctx context.Context, clientID int64)
 const listOrdersByClientID = `-- name: ListOrdersByClientID :many
 SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date, o.selected_provider_id, o.subtitle_category_id,
     sc.name as category_name,
+    suc.name as subcategory_name,
     s.title as service_title,
     p.username as provider_name
 FROM "orders" o
     JOIN "service_categories" sc ON o.category_id = sc.id
+    JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
     LEFT JOIN "services" s ON o.service_id = s.id
     LEFT JOIN "users" p ON s.provider_id = p.id
 WHERE o.client_id = $1
@@ -531,6 +615,7 @@ type ListOrdersByClientIDRow struct {
 	SelectedProviderID sql.NullInt64    `json:"selected_provider_id"`
 	SubtitleCategoryID sql.NullInt64    `json:"subtitle_category_id"`
 	CategoryName       string           `json:"category_name"`
+	SubcategoryName    string           `json:"subcategory_name"`
 	ServiceTitle       sql.NullString   `json:"service_title"`
 	ProviderName       sql.NullString   `json:"provider_name"`
 }
@@ -559,6 +644,7 @@ func (q *Queries) ListOrdersByClientID(ctx context.Context, arg ListOrdersByClie
 			&i.SelectedProviderID,
 			&i.SubtitleCategoryID,
 			&i.CategoryName,
+			&i.SubcategoryName,
 			&i.ServiceTitle,
 			&i.ProviderName,
 		); err != nil {

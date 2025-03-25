@@ -14,9 +14,10 @@ import (
 
 // createOrderRequest представляет запрос на создание заказа
 type createOrderRequest struct {
-	ClientMessage string `json:"client_message" binding:"required"` // Сообщение от клиента
-	CategoryID    int64  `json:"category_id" binding:"required"`    // ID категории услуги
-	OrderDate     string `json:"order_date"`                        // Планируемая дата заказа (необязательно)
+	ClientMessage string `json:"client_message" binding:"required"`    // Сообщение от клиента
+	CategoryID    int64  `json:"category_id" binding:"required,min=1"` // ID категории услуги
+	SubCategoryID int64  `json:"subcategory_id" binding:"required,min=1"`
+	OrderDate     string `json:"order_date"` // Планируемая дата заказа (необязательно)
 }
 
 // createOrderResponse представляет ответ на создание заказа
@@ -24,6 +25,7 @@ type createOrderResponse struct {
 	ID            int64                 `json:"id"`
 	ClientID      int64                 `json:"client_id"`
 	CategoryID    int64                 `json:"category_id"`
+	SubCategoryID int64                 `json:"subcategory_id"`
 	Status        sqlc.NullStatusOrders `json:"status"`
 	ClientMessage string                `json:"client_message"`
 	CategoryName  string                `json:"category_name,omitempty"`
@@ -56,6 +58,16 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		return
 	}
 
+	subcategory, err := server.store.GetSubtitleCategoryByID(ctx, req.SubCategoryID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(errors.New("подкатегория услуги не найдена")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
 	// Парсим дату заказа, если она указана
 	var orderDate sql.NullTime
 	if req.OrderDate != "" {
@@ -69,11 +81,12 @@ func (server *Server) createOrder(ctx *gin.Context) {
 
 	// Создаем параметры для запроса
 	arg := sqlc.CreateOrderParams{
-		ClientID:      user.ID,
-		CategoryID:    req.CategoryID,
-		Status:        sqlc.NullStatusOrders{StatusOrders: sqlc.StatusOrdersPending, Valid: true},
-		ClientMessage: sql.NullString{String: req.ClientMessage, Valid: true},
-		OrderDate:     orderDate,
+		ClientID:           user.ID,
+		CategoryID:         req.CategoryID,
+		SubtitleCategoryID: sql.NullInt64{Int64: subcategory.ID, Valid: true},
+		Status:             sqlc.NullStatusOrders{StatusOrders: sqlc.StatusOrdersPending, Valid: true},
+		ClientMessage:      sql.NullString{String: req.ClientMessage, Valid: true},
+		OrderDate:          orderDate,
 	}
 
 	// Создаем заказ в базе данных
@@ -95,6 +108,7 @@ func (server *Server) createOrder(ctx *gin.Context) {
 		ID:            order.ID,
 		ClientID:      order.ClientID,
 		CategoryID:    order.CategoryID,
+		SubCategoryID: order.SubtitleCategoryID.Int64,
 		Status:        order.Status,
 		ClientMessage: order.ClientMessage.String,
 		CategoryName:  category.Name,
@@ -215,8 +229,8 @@ func (server *Server) listOrders(ctx *gin.Context) {
 // listAvailableOrdersRequest представляет запрос на получение доступных заказов для провайдера
 type listAvailableOrdersRequest struct {
 	CategoryFilter int64 `form:"category_filter"`
-	PageID   int32 `form:"page_id" binding:"required,min=1"`
-	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
+	PageID         int32 `form:"page_id" binding:"required,min=1"`
+	PageSize       int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
 // listAvailableOrders обрабатывает запрос на получение доступных заказов для провайдера
@@ -242,8 +256,8 @@ func (server *Server) listAvailableOrders(ctx *gin.Context) {
 	// Создаем параметры для запроса
 	arg := sqlc.ListAvailableOrdersForProviderParams{
 		// ProviderID: user.ID,
-		Limit:      int64(req.PageSize),
-		Offset:     int64((req.PageID - 1) * req.PageSize),
+		Limit:  int64(req.PageSize),
+		Offset: int64((req.PageID - 1) * req.PageSize),
 	}
 
 	// Получаем заказы из базы данных
@@ -545,6 +559,7 @@ func (server *Server) updateOrderStatus(ctx *gin.Context) {
 type updateOrderRequest struct {
 	OrderID       int64  `json:"order_id" binding:"min=1,required"`
 	CategoryID    int64  `json:"category_id" binding:"min=1,required"`
+	SubCategoryID int64  `json:"subcategory_id" binding:"min=1,required"`
 	ClientMessage string `json:"client_message" binding:"required"`
 }
 
@@ -568,6 +583,7 @@ func (server *Server) updatedOrder(ctx *gin.Context) {
 	arg := sqlc.UpdateOrderParams{
 		ID:            isOrder.ID,
 		CategoryID:    req.CategoryID,
+		SubtitleCategoryID: sql.NullInt64{Int64: req.SubCategoryID, Valid: true},
 		ClientMessage: sql.NullString{String: req.ClientMessage, Valid: true},
 	}
 
@@ -681,6 +697,64 @@ func (server *Server) getOrdersByCategory(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, orders)
 }
 
+type getOrdersBySubCategoryRequest struct {
+	SubCategoryID int64 `uri:"subcategory_id" binding:"required"`
+	PageID     int32 `form:"page_id" binding:"required,min=1"`
+	PageSize   int32 `form:"page_size" binding:"required,min=5,max=10"`
+}
+
+// getOrdersByCategory обрабатывает запрос на получение заказов по категории
+func (server *Server) getOrdersBySubCategory(ctx *gin.Context) {
+	var req getOrdersBySubCategoryRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// Получаем данные пользователя из токена
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		return
+	}
+
+	// Проверяем права доступа (провайдер может просматривать заказы только в своих категориях)
+	if user.Role.Role == sqlc.RoleProvider {
+		hasServices, err := server.checkProviderHasServicesInSubCategory(ctx, user.ID, req.SubCategoryID)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		if !hasServices {
+			ctx.JSON(http.StatusForbidden, errorResponse(errors.New("вы можете просматривать заказы только в категориях ваших услуг")))
+			return
+		}
+	} else if user.Role.Role != sqlc.RoleAdmin {
+		ctx.JSON(http.StatusForbidden, errorResponse(errors.New("только провайдеры и администраторы могут просматривать заказы по категориям")))
+		return
+	}
+
+	// Создаем параметры для запроса
+	arg := sqlc.GetOrdersBySubCategoryParams{
+		SubtitleCategoryID: sql.NullInt64{Int64: req.SubCategoryID, Valid: true},
+		Limit:      int64(req.PageSize),
+		Offset:     int64((req.PageID - 1) * req.PageSize),
+	}
+
+	// Получаем заказы из базы данных
+	orders, err := server.store.GetOrdersBySubCategory(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, orders)
+}
+
 func (server *Server) deleteOrder(ctx *gin.Context) {
 	var req getOrderByIDRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -706,6 +780,17 @@ func (server *Server) checkProviderHasServicesInCategory(ctx *gin.Context, provi
 	services, err := server.store.ListServicesByProviderIDAndCategory(ctx, sqlc.ListServicesByProviderIDAndCategoryParams{
 		ProviderID: providerID,
 		CategoryID: categoryID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return len(services) > 0, nil
+}
+
+func (server *Server) checkProviderHasServicesInSubCategory(ctx *gin.Context, providerID, subCategoryID int64) (bool, error) {
+	services, err := server.store.ListServicesByProviderIDAndSubCategory(ctx, sqlc.ListServicesByProviderIDAndSubCategoryParams{
+		ProviderID: providerID,
+		SubtitleCategoryID: sql.NullInt64{Int64: subCategoryID, Valid: true},
 	})
 	if err != nil {
 		return false, err
