@@ -165,7 +165,7 @@ func (server *Server) checkSubscriptionActive(ctx *gin.Context) {
 	subscription, err := server.store.GetActiveSubscriptionForProvider(ctx, user.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusBadRequest, gin.H{
+			ctx.JSON(http.StatusPaymentRequired, gin.H{
 				"has_active_subscription": false,
 				"message":                 "у вас нет активной подписки",
 			})
