@@ -275,24 +275,24 @@ func (server *Server) listAvailableOrders(ctx *gin.Context) {
 		if order.ClientCity.String != user.City.String {
 			continue
 		}
-		
+
 		// Случай 1: Категория и подкатегория заданы (не "all")
 		if req.CategoryFilter != 0 && req.SubCategoryFilter != 0 {
 			// Мультифильтрация
 			if order.CategoryID == req.CategoryFilter && order.SubtitleCategoryID.Int64 == req.SubCategoryFilter {
 				resultOrders = append(resultOrders, order)
 			}
-		// Случай 2: Только категория задана (подкатегория = "all")
+			// Случай 2: Только категория задана (подкатегория = "all")
 		} else if req.CategoryFilter != 0 {
 			if order.CategoryID == req.CategoryFilter {
 				resultOrders = append(resultOrders, order)
 			}
-		// Случай 3: Только подкатегория задана (категория = "all")
+			// Случай 3: Только подкатегория задана (категория = "all")
 		} else if req.SubCategoryFilter != 0 {
 			if order.SubtitleCategoryID.Int64 == req.SubCategoryFilter {
 				resultOrders = append(resultOrders, order)
 			}
-		// Случай 4: Оба фильтра = "all" - выводим все заказы для города пользователя
+			// Случай 4: Оба фильтра = "all" - выводим все заказы для города пользователя
 		} else {
 			resultOrders = append(resultOrders, order)
 		}
@@ -779,7 +779,26 @@ func (server *Server) deleteOrder(ctx *gin.Context) {
 		return
 	}
 
-	err := server.store.DeleteOrder(ctx, req.ID)
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		return
+	}
+
+	order, err := server.store.GetOrderByID(ctx, req.ID)
+	if err != nil {
+		if err ==sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	if order.ClientID != user.ID && user.Role.Role != sqlc.RoleAdmin {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("нет доступа")))
+	}
+
+	err = server.store.DeleteOrder(ctx, req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -813,4 +832,34 @@ func (server *Server) checkProviderHasServicesInSubCategory(ctx *gin.Context, pr
 		return false, err
 	}
 	return len(services) > 0, nil
+}
+
+func (server *Server) listOrdersFromAdmin(ctx *gin.Context) {
+	var req listOrdersRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.ListOrdersParams{
+		Limit:  int64(req.PageSize),
+		Offset: int64((req.PageID - 1) * req.PageSize),
+	}
+
+	orders, err := server.store.ListOrders(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ordersCount, err := server.store.CountOrders(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"orders":       orders,
+		"orders_count": ordersCount,
+	})
 }

@@ -24,6 +24,7 @@ type Querier interface {
 	// Входные параметры: ID заказа
 	// Возвращает: количество откликов (число)
 	CountOrderResponsesByOrderId(ctx context.Context, orderID int64) (int64, error)
+	CountOrders(ctx context.Context) (int64, error)
 	CountPromoCode(ctx context.Context) (int64, error)
 	CountReviews(ctx context.Context) (int64, error)
 	CountService(ctx context.Context) (int64, error)
@@ -145,6 +146,7 @@ type Querier interface {
 	ListCountServicesByCatetegory(ctx context.Context, categoryID int64) (int64, error)
 	// Получает список избранных услугодателей клиента
 	ListFavoriteProviders(ctx context.Context, arg ListFavoriteProvidersParams) ([]ListFavoriteProvidersRow, error)
+	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
 	ListOrdersByClientID(ctx context.Context, arg ListOrdersByClientIDParams) ([]ListOrdersByClientIDRow, error)
 	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error)

@@ -183,6 +183,13 @@ SET category_id = $2,
 WHERE id = $1
 RETURNING *;
 
+-- name: ListOrders :many
+SELECT * FROM "orders"
+LIMIT $1 OFFSET $2;
+
+-- name: CountOrders :one
+SELECT COUNT(*) FROM "orders";
+
 -- name: DeleteOrder :exec
 DELETE FROM orders
 WHERE id = $1;

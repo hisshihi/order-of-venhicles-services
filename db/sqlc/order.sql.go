@@ -92,6 +92,17 @@ func (q *Queries) AcceptOrderByProviderID(ctx context.Context, arg AcceptOrderBy
 	return i, err
 }
 
+const countOrders = `-- name: CountOrders :one
+SELECT COUNT(*) FROM "orders"
+`
+
+func (q *Queries) CountOrders(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOrders)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO "orders" (
         client_id,
@@ -576,6 +587,53 @@ func (q *Queries) ListCountOrdersByClientID(ctx context.Context, clientID int64)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const listOrders = `-- name: ListOrders :many
+SELECT id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date, selected_provider_id, subtitle_category_id FROM "orders"
+LIMIT $1 OFFSET $2
+`
+
+type ListOrdersParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error) {
+	rows, err := q.db.QueryContext(ctx, listOrders, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Order{}
+	for rows.Next() {
+		var i Order
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClientID,
+			&i.CategoryID,
+			&i.ServiceID,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProviderAccepted,
+			&i.ProviderMessage,
+			&i.ClientMessage,
+			&i.OrderDate,
+			&i.SelectedProviderID,
+			&i.SubtitleCategoryID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listOrdersByClientID = `-- name: ListOrdersByClientID :many

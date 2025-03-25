@@ -209,6 +209,7 @@ func (server *Server) setupServer() {
 	adminRoutes.POST("/promo-codes", server.createPromoCode)
 	adminRoutes.GET("/reviews/list", server.listReviews)
 	adminRoutes.GET("/services/list", server.listServiceForAdmin)
+	adminRoutes.GET("/orders/list", server.listOrdersFromAdmin)
 
 	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
 	// ----------------------------------------------------
