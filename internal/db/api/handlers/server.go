@@ -198,6 +198,8 @@ func (server *Server) setupServer() {
 	adminRoutes.Use(server.authMiddleware())
 	adminRoutes.Use(server.roleCheckMiddleware(string(sqlc.RoleAdmin)))
 	adminRoutes.GET("/users/:id", server.getUserByID) // Доступ к данным пользователя по ID
+	adminRoutes.GET("/users/list", server.listUsers)
+	adminRoutes.PUT("/users/update", server.updateUserForAdmin)
 	adminRoutes.POST("/category", server.createCategory)
 	adminRoutes.PUT("/category/:id", server.updateCategory)
 	adminRoutes.DELETE("/category/:id", server.deleteCategory)

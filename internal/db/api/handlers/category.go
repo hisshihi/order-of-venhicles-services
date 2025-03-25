@@ -102,7 +102,7 @@ type updateCategoryRequest struct {
 	Name string `json:"name" binding:"required"`
 	Icon string `json:"icon" binding:"required"`
 	Description string `json:"description" binding:"required"`
-	Slug string `json:"slug" binding:"required,alphanum"`
+	Slug string `json:"slug" binding:"required"`
 }
 
 func (server *Server) updateCategory(ctx *gin.Context) {
@@ -187,3 +187,4 @@ func (server *Server) getCategoryBySlug(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, category)
 }
+

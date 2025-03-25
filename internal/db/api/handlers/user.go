@@ -586,3 +586,144 @@ func (server *Server) changePassword(ctx *gin.Context) {
 		"message": "Пароль успешно изменён",
 	})
 }
+
+type listUsersRequest struct {
+	PageID   int32 `form:"page_id" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
+	Search string `form:"search"`
+}
+
+func (server *Server) listUsers(ctx *gin.Context) {
+	var req listUsersRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.ListUsersParams{
+		Limit:  int64(req.PageSize),
+		Offset: int64((req.PageID - 1) * req.PageSize),
+	}
+
+	users, err := server.store.ListUsers(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	countUsers, err := server.store.CountUsers(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// searchList, err := server.store.ListUsersByEmail(ctx, sql.NullString{String: req.Search, Valid: true})
+
+	if len(req.Search) > 0 {
+		users, err = server.store.ListUsersByEmail(ctx, sql.NullString{String: req.Search, Valid: true})
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"users": users,
+		"users_count": countUsers,
+	})
+}
+
+type updateUserForAdminRequest struct {
+	ID       int64                 `form:"id" binding:"required,min=1"`
+	Username string                `form:"username" binding:"required"`
+	Email    string                `form:"email" binding:"required,email"`
+	Country  *string               `form:"country,omitempty"`
+	City     *string               `form:"city,omitempty"`
+	District *string               `form:"district,omitempty"`
+	Phone    string                `form:"phone" binding:"required"`
+	Whatsapp string                `form:"whatsapp" binding:"required"`
+	PhotoUrl *multipart.FileHeader `form:"photo_url"`
+}
+
+// Обнолвение пользователя
+func (server *Server) updateUserForAdmin(ctx *gin.Context) {
+	var req updateUserForAdminRequest
+	if err := ctx.ShouldBindWith(&req, binding.FormMultipart); err != nil {
+		log.Println("Ошибка привязки:", err)
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.store.GetUserByID(ctx, req.ID)
+	if err != nil {
+		return
+	}
+
+	var photoBytes []byte
+	if req.PhotoUrl.Header != nil {
+		if req.PhotoUrl != nil {
+			log.Println("Файл загружен:", req.PhotoUrl.Filename)
+			if req.PhotoUrl.Size > 1<<20 {
+				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 1МБ")))
+				return
+			}
+
+			file, err := req.PhotoUrl.Open()
+			if err != nil {
+				log.Println("Ошибка открытия файла:", err)
+				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+				return
+			}
+			defer file.Close()
+
+			photoBytes, err = io.ReadAll(file)
+			if err != nil {
+				log.Println("Ошибка чтения файла:", err)
+				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+				return
+			}
+			log.Println("Размер файла:", len(photoBytes))
+		} else {
+			log.Println("Файл не передан")
+			photoBytes = user.PhotoUrl
+		}
+	} else {
+		photoBytes = user.PhotoUrl
+	}
+
+	arg := sqlc.UpdateUserParams{
+		ID:       user.ID,
+		Username: req.Username,
+		Email:    req.Email,
+		Country:  sql.NullString{String: *req.Country, Valid: req.Country != nil},
+		City:     sql.NullString{String: *req.City, Valid: req.City != nil},
+		District: sql.NullString{String: *req.District, Valid: req.District != nil},
+		Phone:    req.Phone,
+		Whatsapp: req.Whatsapp,
+		PhotoUrl: photoBytes,
+	}
+
+	updateUser, err := server.store.UpdateUser(ctx, arg)
+	if err != nil {
+		log.Println("Ошибка обновления:", err)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	rsp := getCurrentUserResponse{
+		ID:       updateUser.ID,
+		Username: updateUser.Username,
+		Email:    updateUser.Email,
+		Country:  updateUser.Country.String,
+		City:     updateUser.City.String,
+		District: updateUser.District.String,
+		Phone:    updateUser.Phone,
+		Whatsapp: updateUser.Whatsapp,
+		PhotoUrl: base64.StdEncoding.EncodeToString(updateUser.PhotoUrl),
+		Role:     string(updateUser.Role.Role),
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"user": rsp,
+	})
+}
