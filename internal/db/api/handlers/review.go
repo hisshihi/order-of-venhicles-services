@@ -14,8 +14,8 @@ import (
 
 type reviewCreateRequest struct {
 	ProviderID int64  `json:"provider_id" binding:"min=1,required"`
-	Rating  int32  `json:"rating" binding:"min=1,max=5,required"`
-	Comment string `json:"comment" binding:"required,min=10"`
+	Rating     int32  `json:"rating" binding:"min=1,max=5,required"`
+	Comment    string `json:"comment" binding:"required,min=10"`
 }
 
 type reviewCreateResponse struct {
@@ -60,7 +60,7 @@ func (server *Server) createReview(ctx *gin.Context) {
 		if pqErr, ok := err.(*pq.Error); ok {
 			switch pqErr.Code.Name() {
 			case "unique_violation":
-				ctx.JSON(http.StatusForbidden,
+				ctx.JSON(http.StatusConflict,
 					errorResponse(errors.New("вы уже оставили отзыв на этот заказ")))
 				return
 			}
@@ -188,8 +188,9 @@ func (server *Server) deleteReview(ctx *gin.Context) {
 
 // Просмотр отзывов на себя для услугодателя
 type getReviewsByOnlyProviderID struct {
-	PageSize int32 `form:"page_size" binding:"min=5,max=10,required"`
-	PageID   int32 `form:"page_id" binding:"min=1,required"`
+	ProviderID int64 `form:"provider_id" binding:"required,min=1"`
+	PageSize   int32 `form:"page_size" binding:"min=5,max=10,required"`
+	PageID     int32 `form:"page_id" binding:"min=1,required"`
 }
 
 func (server *Server) getReviewsByThisProviderID(ctx *gin.Context) {
@@ -199,35 +200,40 @@ func (server *Server) getReviewsByThisProviderID(ctx *gin.Context) {
 		return
 	}
 
-	user, err := server.getUserDataFromToken(ctx)
+	user, err := server.store.GetUserByID(ctx, req.ProviderID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		if user.Role.Role != sqlc.RoleProvider {
+			ctx.JSON(http.StatusBadRequest, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	}
+
+	arg := sqlc.GetReviewsByProviderIDParams{
+		ProviderID: user.ID,
+		Limit:      int64(req.PageSize),
+		Offset:     int64((req.PageID - 1) * req.PageSize),
+	}
+
+	reviews, err := server.store.GetReviewsByProviderID(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	if user.Role.Role == sqlc.RoleProvider {
-		arg := sqlc.GetReviewsByProviderIDParams{
-			ProviderID: user.ID,
-			Limit:      int64(req.PageSize),
-			Offset:     int64((req.PageID - 1) * req.PageSize),
-		}
+	ctx.JSON(http.StatusOK, reviews)
 
-		reviews, err := server.store.GetReviewsByProviderID(ctx, arg)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-			return
-		}
-
-		ctx.JSON(http.StatusOK, reviews)
-	} else {
-		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("только услугодатель может смотреть свои отзывы")))
-	}
 }
 
 type checkReviewRequest struct {
 	ID int64 `uri:"id" binding:"required,min=1"`
 }
 
-// Проверяем, оставлял ли клжиент отзыв
+// Проверяем, оставлял ли клиент отзыв
 func (server *Server) checkReview(ctx *gin.Context) {
 	var req checkReviewRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
@@ -242,7 +248,7 @@ func (server *Server) checkReview(ctx *gin.Context) {
 	}
 
 	arg := sqlc.CheckIfClientReviewedOrderParams{
-		ClientID: user.ID,
+		ClientID:   user.ID,
 		ProviderID: req.ID,
 	}
 

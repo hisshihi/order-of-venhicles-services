@@ -144,6 +144,7 @@ func (server *Server) setupServer() {
 	clientRoutes.GET("/reviews", server.listReviewByProviderID)
 	clientRoutes.GET("/reviews/:id/rating", server.getAverageRatingForProvider)
 	clientRoutes.DELETE("/reviews/:id", server.deleteReview)
+	clientRoutes.GET("/reviews/list", server.getReviewsByThisProviderID)
 	clientRoutes.GET("/services/:id", server.getServiceByID)
 	clientRoutes.GET("/services/list", server.listService)
 	clientRoutes.GET("/services/list/provider", server.listServiceByProviderID)
@@ -176,7 +177,6 @@ func (server *Server) setupServer() {
 	subscriptionRequiredRoutes.GET("/orders/available", server.listAvailableOrders)
 	subscriptionRequiredRoutes.GET("/orders/statistics", server.getOrdersStatistics)
 	subscriptionRequiredRoutes.GET("/orders/category/:category_id", server.getOrdersByCategory)
-	subscriptionRequiredRoutes.GET("/reviews/only", server.getReviewsByThisProviderID)
 
 	// Маршруты для партнеров
 	partnerRoutes := apiGroup.Group("/partner")
