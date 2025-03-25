@@ -21,6 +21,7 @@ import (
 	"github.com/hisshihi/order-of-venhicles-services/pkg/util"
 	"github.com/lib/pq"
 	"golang.org/x/time/rate"
+	"slices"
 )
 
 const (
@@ -190,6 +191,7 @@ func (server *Server) setupServer() {
 	// Добавьте здесь маршруты для партнеров
 	subscriptionPartnerRequiredRoutes.GET("/subscriptions/provider", server.listSubsciptionsByProviderID)
 	subscriptionPartnerRequiredRoutes.GET("/promo-codes/list", server.listPromoCodes)
+	subscriptionPartnerRequiredRoutes.GET("/promo-codes/list/provider", server.getAllProvidersByPartnerPromos)
 
 	// Маршруты только для администраторов
 	adminRoutes := apiGroup.Group("/admin")
@@ -385,13 +387,7 @@ func (server *Server) roleCheckMiddleware(allowedRoles ...string) gin.HandlerFun
 		}
 
 		// Проверяем, есть ли роль пользователя в списке разрешённых
-		roleAllowed := false
-		for _, role := range allowedRoles {
-			if tokenPayload.Role == role {
-				roleAllowed = true
-				break
-			}
-		}
+		roleAllowed := slices.Contains(allowedRoles, tokenPayload.Role)
 
 		if !roleAllowed {
 			err := errors.New("доступ запрешён: недостаточно прав")
