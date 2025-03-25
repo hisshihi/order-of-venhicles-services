@@ -228,9 +228,10 @@ func (server *Server) listOrders(ctx *gin.Context) {
 
 // listAvailableOrdersRequest представляет запрос на получение доступных заказов для провайдера
 type listAvailableOrdersRequest struct {
-	CategoryFilter int64 `form:"category_filter"`
-	PageID         int32 `form:"page_id" binding:"required,min=1"`
-	PageSize       int32 `form:"page_size" binding:"required,min=5,max=10"`
+	CategoryFilter    int64 `form:"category_filter"`
+	SubCategoryFilter int64 `form:"subcategory_filter"`
+	PageID            int32 `form:"page_id" binding:"required,min=1"`
+	PageSize          int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
 // listAvailableOrders обрабатывает запрос на получение доступных заказов для провайдера
@@ -270,14 +271,30 @@ func (server *Server) listAvailableOrders(ctx *gin.Context) {
 	resultOrders := []sqlc.ListAvailableOrdersForProviderRow{}
 
 	for _, order := range orders {
-		if req.CategoryFilter != 0 {
-			if order.ClientCity.String == user.City.String && order.CategoryID == req.CategoryFilter {
+		// Проверяем только город во всех случаях
+		if order.ClientCity.String != user.City.String {
+			continue
+		}
+		
+		// Случай 1: Категория и подкатегория заданы (не "all")
+		if req.CategoryFilter != 0 && req.SubCategoryFilter != 0 {
+			// Мультифильтрация
+			if order.CategoryID == req.CategoryFilter && order.SubtitleCategoryID.Int64 == req.SubCategoryFilter {
 				resultOrders = append(resultOrders, order)
 			}
+		// Случай 2: Только категория задана (подкатегория = "all")
+		} else if req.CategoryFilter != 0 {
+			if order.CategoryID == req.CategoryFilter {
+				resultOrders = append(resultOrders, order)
+			}
+		// Случай 3: Только подкатегория задана (категория = "all")
+		} else if req.SubCategoryFilter != 0 {
+			if order.SubtitleCategoryID.Int64 == req.SubCategoryFilter {
+				resultOrders = append(resultOrders, order)
+			}
+		// Случай 4: Оба фильтра = "all" - выводим все заказы для города пользователя
 		} else {
-			if order.ClientCity.String == user.City.String {
-				resultOrders = append(resultOrders, order)
-			}
+			resultOrders = append(resultOrders, order)
 		}
 	}
 
@@ -581,10 +598,10 @@ func (server *Server) updatedOrder(ctx *gin.Context) {
 	}
 
 	arg := sqlc.UpdateOrderParams{
-		ID:            isOrder.ID,
-		CategoryID:    req.CategoryID,
+		ID:                 isOrder.ID,
+		CategoryID:         req.CategoryID,
 		SubtitleCategoryID: sql.NullInt64{Int64: req.SubCategoryID, Valid: true},
-		ClientMessage: sql.NullString{String: req.ClientMessage, Valid: true},
+		ClientMessage:      sql.NullString{String: req.ClientMessage, Valid: true},
 	}
 
 	updateOrder, err := server.store.UpdateOrder(ctx, arg)
@@ -699,8 +716,8 @@ func (server *Server) getOrdersByCategory(ctx *gin.Context) {
 
 type getOrdersBySubCategoryRequest struct {
 	SubCategoryID int64 `uri:"subcategory_id" binding:"required"`
-	PageID     int32 `form:"page_id" binding:"required,min=1"`
-	PageSize   int32 `form:"page_size" binding:"required,min=5,max=10"`
+	PageID        int32 `form:"page_id" binding:"required,min=1"`
+	PageSize      int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
 // getOrdersByCategory обрабатывает запрос на получение заказов по категории
@@ -741,8 +758,8 @@ func (server *Server) getOrdersBySubCategory(ctx *gin.Context) {
 	// Создаем параметры для запроса
 	arg := sqlc.GetOrdersBySubCategoryParams{
 		SubtitleCategoryID: sql.NullInt64{Int64: req.SubCategoryID, Valid: true},
-		Limit:      int64(req.PageSize),
-		Offset:     int64((req.PageID - 1) * req.PageSize),
+		Limit:              int64(req.PageSize),
+		Offset:             int64((req.PageID - 1) * req.PageSize),
 	}
 
 	// Получаем заказы из базы данных
@@ -789,7 +806,7 @@ func (server *Server) checkProviderHasServicesInCategory(ctx *gin.Context, provi
 
 func (server *Server) checkProviderHasServicesInSubCategory(ctx *gin.Context, providerID, subCategoryID int64) (bool, error) {
 	services, err := server.store.ListServicesByProviderIDAndSubCategory(ctx, sqlc.ListServicesByProviderIDAndSubCategoryParams{
-		ProviderID: providerID,
+		ProviderID:         providerID,
 		SubtitleCategoryID: sql.NullInt64{Int64: subCategoryID, Valid: true},
 	})
 	if err != nil {
