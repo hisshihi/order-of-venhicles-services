@@ -26,6 +26,7 @@ type Querier interface {
 	CountOrderResponsesByOrderId(ctx context.Context, orderID int64) (int64, error)
 	CountPromoCode(ctx context.Context) (int64, error)
 	CountReviews(ctx context.Context) (int64, error)
+	CountService(ctx context.Context) (int64, error)
 	CountServicesByProviderID(ctx context.Context, providerID int64) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
 	// Создает новое сообщение

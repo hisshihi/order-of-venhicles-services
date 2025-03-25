@@ -351,6 +351,41 @@ func (server *Server) listService(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, services)
 }
 
+type listServicesForAdminRequest struct {
+	PageID     int32 `form:"page_id" binding:"min=1,required"`
+	PageSize   int32 `form:"page_size" binding:"min=5,max=10,required"`
+}
+
+func (server *Server) listServiceForAdmin(ctx *gin.Context) {
+	var req listServicesForAdminRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.ListServicesParams{
+		Limit:  int64(req.PageSize),
+		Offset: int64((req.PageID - 1) * req.PageSize),
+	}
+
+	services, err := server.store.ListServices(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	countService, err := server.store.CountService(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"services": services,
+		"count_service": countService,
+	})
+}
+
 type updateServiceRequest struct {
 	CategoryID    int64  `json:"category_id" binding:"min=1,required"`
 	SubCategoryID int64  `json:"subcategory_id" binding:"min=1,required"`
@@ -467,7 +502,7 @@ func (server *Server) deleteService(ctx *gin.Context) {
 		return
 	}
 
-	if service.ProviderID != user.ID {
+	if service.ProviderID != user.ID && user.Role.Role != sqlc.RoleAdmin {
 		ctx.JSON(http.StatusForbidden,
 			errorResponse(errors.New("у вас нет прав на удаление этой услуги")))
 		return

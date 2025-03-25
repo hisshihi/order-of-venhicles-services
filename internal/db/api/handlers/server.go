@@ -208,6 +208,7 @@ func (server *Server) setupServer() {
 	adminRoutes.DELETE("/subtitle-category/:id", server.deleteSubtitleCategory)
 	adminRoutes.POST("/promo-codes", server.createPromoCode)
 	adminRoutes.GET("/reviews/list", server.listReviews)
+	adminRoutes.GET("/services/list", server.listServiceForAdmin)
 
 	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
 	// ----------------------------------------------------

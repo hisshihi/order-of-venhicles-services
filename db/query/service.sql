@@ -150,3 +150,6 @@ WHERE provider_id = $1;
 -- name: FilterServiceByPrice :many
 SELECT * FROM "services"
 WHERE price >= $1 AND price <= $2;
+
+-- name: CountService :one
+SELECT COUNT(*) FROM "services";

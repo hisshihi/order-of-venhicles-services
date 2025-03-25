@@ -11,6 +11,17 @@ import (
 	"time"
 )
 
+const countService = `-- name: CountService :one
+SELECT COUNT(*) FROM "services"
+`
+
+func (q *Queries) CountService(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countService)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countServicesByProviderID = `-- name: CountServicesByProviderID :one
 SELECT COUNT(*) FROM "services"
 WHERE provider_id = $1
