@@ -11,6 +11,17 @@ import (
 	"time"
 )
 
+const countPromoCode = `-- name: CountPromoCode :one
+SELECT COUNT(*) FROM "promo_codes"
+`
+
+func (q *Queries) CountPromoCode(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countPromoCode)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createPromoCode = `-- name: CreatePromoCode :one
 INSERT INTO promo_codes (partner_id, code, discount_percentage, valid_until, max_usages, current_usages)
 VALUES ($1, $2, $3, $4, $5, $6)

@@ -57,3 +57,6 @@ WHERE id = $1;
 -- name: DeletePromoCode :exec
 DELETE FROM promo_codes
 WHERE id = $1;
+
+-- name: CountPromoCode :one
+SELECT COUNT(*) FROM "promo_codes";

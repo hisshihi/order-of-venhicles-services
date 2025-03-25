@@ -24,6 +24,7 @@ type Querier interface {
 	// Входные параметры: ID заказа
 	// Возвращает: количество откликов (число)
 	CountOrderResponsesByOrderId(ctx context.Context, orderID int64) (int64, error)
+	CountPromoCode(ctx context.Context) (int64, error)
 	CountServicesByProviderID(ctx context.Context, providerID int64) (int64, error)
 	// Создает новое сообщение
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)

@@ -180,15 +180,16 @@ func (server *Server) setupServer() {
 	subscriptionRequiredRoutes.GET("/orders/subcategory/:subcategory_id", server.getOrdersBySubCategory)
 
 	// Маршруты для партнеров
-	partnerRoutes := apiGroup.Group("/partner")
-	partnerRoutes.Use(server.authMiddleware())
-	partnerRoutes.Use(server.roleCheckMiddleware(
+	subscriptionPartnerRequiredRoutes := apiGroup.Group("/partner")
+	subscriptionPartnerRequiredRoutes.Use(server.authMiddleware())
+	subscriptionPartnerRequiredRoutes.Use(server.roleCheckMiddleware(
 		string(sqlc.RolePartner),
 		string(sqlc.RoleAdmin),
 	))
+	subscriptionPartnerRequiredRoutes.Use(server.subscriptionCheckMiddleware())
 	// Добавьте здесь маршруты для партнеров
-	partnerRoutes.POST("/promo-codes", server.createPromoCode)
-	partnerRoutes.GET("/subscriptions/provider", server.listSubsciptionsByProviderID)
+	subscriptionPartnerRequiredRoutes.GET("/subscriptions/provider", server.listSubsciptionsByProviderID)
+	subscriptionPartnerRequiredRoutes.GET("/promo-codes/list", server.listPromoCodes)
 
 	// Маршруты только для администраторов
 	adminRoutes := apiGroup.Group("/admin")
@@ -201,6 +202,7 @@ func (server *Server) setupServer() {
 	adminRoutes.POST("/subtitle-category", server.createSubtitleCategory)
 	adminRoutes.PUT("/subtitle-category", server.updateSubtitleCategory)
 	adminRoutes.DELETE("/subtitle-category/:id", server.deleteSubtitleCategory)
+	adminRoutes.POST("/promo-codes", server.createPromoCode)
 
 	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
 	// ----------------------------------------------------
