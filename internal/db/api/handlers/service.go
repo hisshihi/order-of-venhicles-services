@@ -13,7 +13,7 @@ import (
 
 type createServiceRequest struct {
 	CategoryID    int64  `json:"category_id" binding:"required,min=1"`
-	SubCategoryID int64  `json:"sub_category_id" binding:"required,min=1"`
+	SubCategoryID int64  `json:"subcategory_id" binding:"required,min=1"`
 	Title         string `json:"title" binding:"required,min=5"`
 	Description   string `json:"description" binding:"required"`
 	Price         string `json:"price" binding:"required"`
@@ -26,7 +26,7 @@ type createServiceResponse struct {
 	ID               int64                `json:"id"`
 	ProviderID       int64                `json:"provider_id"`
 	CategoryID       int64                `json:"category_id"`
-	SubCategoryID    int64                `json:"sub_category_id"`
+	SubCategoryID    int64                `json:"subcategory_id"`
 	SubCategory      string               `json:"subcategory"`
 	Title            string               `json:"title"`
 	Description      string               `json:"description"`
@@ -320,7 +320,7 @@ func (server *Server) listService(ctx *gin.Context) {
 
 type updateServiceRequest struct {
 	CategoryID    int64  `json:"category_id" binding:"min=1,required"`
-	SubCategoryID int64  `json:"sub_category_id" binding:"min=1,required"`
+	SubCategoryID int64  `json:"subcategory_id" binding:"min=1,required"`
 	Title         string `json:"title" binding:"required,min=5"`
 	Description   string `json:"description" binding:"required,min=10"`
 	Price         string `json:"price" binding:"required"`
