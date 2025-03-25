@@ -57,6 +57,8 @@ type Querier interface {
 	DeleteSubscription(ctx context.Context, id int64) error
 	DeleteSubtitleCategory(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
+	// Фильтрация услуг по цене
+	FilterServiceByPrice(ctx context.Context, arg FilterServiceByPriceParams) ([]Service, error)
 	GetActiveSubscriptionForProvider(ctx context.Context, providerID int64) (Subscription, error)
 	// Получает всех поставщиков, которые использовали данный промокод
 	GetAllProvidersByPartnerPromos(ctx context.Context, arg GetAllProvidersByPartnerPromosParams) ([]GetAllProvidersByPartnerPromosRow, error)

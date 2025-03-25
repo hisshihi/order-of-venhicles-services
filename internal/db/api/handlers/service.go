@@ -261,9 +261,12 @@ func (server *Server) listServiceFromProvider(ctx *gin.Context) {
 }
 
 type listServicesByCategoryIDRequest struct {
-	CategoryID int64 `form:"category_id" binding:"min=1,required"`
-	PageID     int32 `form:"page_id" binding:"min=1,required"`
-	PageSize   int32 `form:"page_size" binding:"min=5,max=10,required"`
+	CategoryID    int64         `form:"category_id" binding:"min=1,required"`
+	PageID        int32         `form:"page_id" binding:"min=1,required"`
+	PageSize      int32         `form:"page_size" binding:"min=5,max=10,required"`
+	SubCategoryID int64 `form:"subcategory_id,string"`
+	MinPrice      int64 `form:"min_price,string"`
+	MaxPrice      int64 `form:"max_price,string"`
 }
 
 func (server *Server) listServiceByCategoryID(ctx *gin.Context) {
@@ -291,8 +294,38 @@ func (server *Server) listServiceByCategoryID(ctx *gin.Context) {
 		return
 	}
 
+	// Применяем фильтрацию
+	servicesResult := []sqlc.ListServicesByCategoryRow{}
+	for _, service := range services {
+		// Проверяем подкатегорию, если она задана
+		if req.SubCategoryID != 0 {
+			if service.SubtitleCategoryID.Int64 != req.SubCategoryID {
+				continue // Пропускаем, если не соответствует
+			}
+		}
+
+		// Проверяем минимальную цену, если она задана
+		if req.MinPrice > 0 {
+			price, err := strconv.ParseFloat(service.Price, 64)
+			if err != nil || price < float64(req.MinPrice) {
+				continue // Пропускаем, если цена меньше минимальной
+			}
+		}
+
+		// Проверяем максимальную цену, если она задана
+		if req.MaxPrice > 0 {
+			price, err := strconv.ParseFloat(service.Price, 64)
+			if err != nil || price > float64(req.MaxPrice) {
+				continue // Пропускаем, если цена больше максимальной
+			}
+		}
+
+		// Если прошли все фильтры, добавляем сервис в результат
+		servicesResult = append(servicesResult, service)
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{
-		"service":      services,
+		"service":      servicesResult,
 		"service_size": servicesSize,
 	})
 }

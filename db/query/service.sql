@@ -145,3 +145,8 @@ WHERE s.provider_id = $1
 -- name: CountServicesByProviderID :one
 SELECT COUNT(*) FROM "services"
 WHERE provider_id = $1;
+
+-- Фильтрация услуг по цене
+-- name: FilterServiceByPrice :many
+SELECT * FROM "services"
+WHERE price >= $1 AND price <= $2;

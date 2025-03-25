@@ -101,6 +101,54 @@ func (q *Queries) DeleteService(ctx context.Context, arg DeleteServiceParams) er
 	return err
 }
 
+const filterServiceByPrice = `-- name: FilterServiceByPrice :many
+SELECT id, provider_id, category_id, title, description, price, created_at, updated_at, subcategory, country, city, district, subtitle_category_id FROM "services"
+WHERE price >= $1 AND price <= $2
+`
+
+type FilterServiceByPriceParams struct {
+	Price   string `json:"price"`
+	Price_2 string `json:"price_2"`
+}
+
+// Фильтрация услуг по цене
+func (q *Queries) FilterServiceByPrice(ctx context.Context, arg FilterServiceByPriceParams) ([]Service, error) {
+	rows, err := q.db.QueryContext(ctx, filterServiceByPrice, arg.Price, arg.Price_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Service{}
+	for rows.Next() {
+		var i Service
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProviderID,
+			&i.CategoryID,
+			&i.Title,
+			&i.Description,
+			&i.Price,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Subcategory,
+			&i.Country,
+			&i.City,
+			&i.District,
+			&i.SubtitleCategoryID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getServiceByID = `-- name: GetServiceByID :one
 SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.created_at, s.updated_at, s.subcategory, s.country, s.city, s.district, s.subtitle_category_id,
     u.username as provider_name,
