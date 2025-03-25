@@ -12,25 +12,51 @@ import (
 	"github.com/lib/pq"
 )
 
+type createPromoCodeRequest struct {
+	PartnerID          int64  `json:"partner_id" binding:"required,min=1"`
+	DiscountPercentage int32  `json:"discount_percentage" binding:"required,min1"`
+	Code               string `json:"code"`
+	Valid              int    `json:"valid"`
+}
+
 func (server *Server) createPromoCode(ctx *gin.Context) {
+	var req createPromoCodeRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
 	user, err := server.getUserDataFromToken(ctx)
 	if err != nil {
 		return
 	}
 
-	if user.Role.Role != sqlc.RolePartner {
-		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("только партнёр может создавать промокоды")))
+	if user.Role.Role != sqlc.RoleAdmin {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(errors.New("только админ может создавать промокоды")))
 		return
 	}
 
 	startDate := time.Now()
-	id := uuid.New()
+
+	var id string
+	if len(req.Code) > 0 {
+		id = req.Code
+	} else {
+		id = uuid.NewString()
+	}
+
+	var valiDay int
+	if req.Valid > 0 {
+		valiDay = req.Valid
+	} else {
+		valiDay = 2
+	}
 
 	arg := sqlc.CreatePromoCodeParams{
-		PartnerID:          user.ID,
-		Code:               id.String()[:8],
-		DiscountPercentage: 14,
-		ValidUntil:         startDate.AddDate(0, 0, 2),
+		PartnerID:          req.PartnerID,
+		Code:               id[:8],
+		DiscountPercentage: req.DiscountPercentage,
+		ValidUntil:         startDate.AddDate(0, 0, valiDay),
 		MaxUsages:          sql.NullInt32{Int32: 1, Valid: true},
 		CurrentUsages:      sql.NullInt32{Int32: 0, Valid: false},
 	}
