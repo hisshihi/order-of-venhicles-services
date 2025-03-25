@@ -60,3 +60,11 @@ SELECT EXISTS(
         WHERE client_id = $1
             AND provider_id = $2
     ) as has_review;
+
+-- name: ListReview :many
+SELECT * FROM "reviews" r
+ORDER BY r.created_at
+LIMIT $1 OFFSET $2;
+
+-- name: CountReviews :one
+SELECT COUNT(*) FROM reviews;

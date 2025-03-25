@@ -25,6 +25,7 @@ type Querier interface {
 	// Возвращает: количество откликов (число)
 	CountOrderResponsesByOrderId(ctx context.Context, orderID int64) (int64, error)
 	CountPromoCode(ctx context.Context) (int64, error)
+	CountReviews(ctx context.Context) (int64, error)
 	CountServicesByProviderID(ctx context.Context, providerID int64) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
 	// Создает новое сообщение
@@ -147,6 +148,7 @@ type Querier interface {
 	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error)
 	ListPromoCodesByPartnerID(ctx context.Context, arg ListPromoCodesByPartnerIDParams) ([]PromoCode, error)
+	ListReview(ctx context.Context, arg ListReviewParams) ([]Review, error)
 	ListServiceCategories(ctx context.Context) ([]ServiceCategory, error)
 	ListServices(ctx context.Context, arg ListServicesParams) ([]ListServicesRow, error)
 	ListServicesByCategory(ctx context.Context, arg ListServicesByCategoryParams) ([]ListServicesByCategoryRow, error)

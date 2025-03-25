@@ -265,3 +265,38 @@ func (server *Server) checkReview(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, result)
 }
+
+type listReviewRequest struct {
+	PageID int32 `form:"page_id" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
+}
+
+func (server *Server) listReviews(ctx *gin.Context) {
+	var req listReviewRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.ListReviewParams{
+		Limit: int64(req.PageSize),
+		Offset: int64((req.PageID - 1) * req.PageSize),
+	}
+
+	reviews, err := server.store.ListReview(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	reviewsCount, err := server.store.CountReviews(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"reviews": reviews,
+		"reviews_count": reviewsCount,
+	})
+}

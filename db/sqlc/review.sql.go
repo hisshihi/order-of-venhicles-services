@@ -33,6 +33,17 @@ func (q *Queries) CheckIfClientReviewedOrder(ctx context.Context, arg CheckIfCli
 	return has_review, err
 }
 
+const countReviews = `-- name: CountReviews :one
+SELECT COUNT(*) FROM reviews
+`
+
+func (q *Queries) CountReviews(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countReviews)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createReview = `-- name: CreateReview :one
 INSERT INTO "reviews" (
         client_id,
@@ -201,6 +212,48 @@ func (q *Queries) GetReviewsByProviderID(ctx context.Context, arg GetReviewsByPr
 			&i.Rating,
 			&i.Comment,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listReview = `-- name: ListReview :many
+SELECT id, client_id, provider_id, rating, comment, created_at, updated_at FROM "reviews" r
+ORDER BY r.created_at
+LIMIT $1 OFFSET $2
+`
+
+type ListReviewParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+func (q *Queries) ListReview(ctx context.Context, arg ListReviewParams) ([]Review, error) {
+	rows, err := q.db.QueryContext(ctx, listReview, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Review{}
+	for rows.Next() {
+		var i Review
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClientID,
+			&i.ProviderID,
+			&i.Rating,
+			&i.Comment,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
