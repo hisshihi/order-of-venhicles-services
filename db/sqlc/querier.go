@@ -30,6 +30,7 @@ type Querier interface {
 	CountService(ctx context.Context) (int64, error)
 	CountServicesByProviderID(ctx context.Context, providerID int64) (int64, error)
 	CountSubscriptions(ctx context.Context) (int64, error)
+	CountSupportMessages(ctx context.Context) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
 	// Создает новое сообщение
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)
@@ -47,6 +48,7 @@ type Querier interface {
 	CreateServiceCategory(ctx context.Context, arg CreateServiceCategoryParams) (ServiceCategory, error)
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error)
 	CreateSubtitle(ctx context.Context, name string) (SubtitleCategory, error)
+	CreateSupportMessage(ctx context.Context, arg CreateSupportMessageParams) (SupportMessage, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteOrder(ctx context.Context, id int64) error
 	// Удаляет отклик по его ID
@@ -167,6 +169,7 @@ type Querier interface {
 	ListSubscriptions(ctx context.Context, arg ListSubscriptionsParams) ([]Subscription, error)
 	ListSubscriptionsByProviderID(ctx context.Context, arg ListSubscriptionsByProviderIDParams) ([]Subscription, error)
 	ListSubtitleCategory(ctx context.Context) ([]SubtitleCategory, error)
+	ListSupportMessages(ctx context.Context) ([]SupportMessage, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	ListUsersByEmail(ctx context.Context, dollar_1 sql.NullString) ([]User, error)
 	ListUsersByRole(ctx context.Context, role NullRole) ([]User, error)

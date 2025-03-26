@@ -331,6 +331,14 @@ type SubtitleCategory struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type SupportMessage struct {
+	ID        int64     `json:"id"`
+	SenderID  int64     `json:"sender_id"`
+	Subject   string    `json:"subject"`
+	Messages  string    `json:"messages"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type User struct {
 	ID               int64          `json:"id"`
 	Username         string         `json:"username"`
