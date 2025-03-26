@@ -53,6 +53,7 @@ type Querier interface {
 	// Возвращает: ничего
 	DeleteOrderResponse(ctx context.Context, id int64) error
 	DeleteOrdersByCategoryID(ctx context.Context, categoryID int64) (int64, error)
+	DeleteOrdersBySubcategoryID(ctx context.Context, subtitleCategoryID sql.NullInt64) (int64, error)
 	DeletePayment(ctx context.Context, id int64) error
 	DeletePendingSubscriptionByPaymentID(ctx context.Context, paymentID int64) error
 	DeletePromoCode(ctx context.Context, id int64) error
@@ -61,8 +62,9 @@ type Querier interface {
 	DeleteService(ctx context.Context, arg DeleteServiceParams) error
 	DeleteServiceCategory(ctx context.Context, id int64) (int64, error)
 	DeleteServicesByCategoryID(ctx context.Context, categoryID int64) (int64, error)
+	DeleteServicesBySubcategoryID(ctx context.Context, subtitleCategoryID sql.NullInt64) (int64, error)
 	DeleteSubscription(ctx context.Context, id int64) error
-	DeleteSubtitleCategory(ctx context.Context, id int64) error
+	DeleteSubtitleCategory(ctx context.Context, id int64) (int64, error)
 	DeleteUser(ctx context.Context, id int64) error
 	// Фильтрация услуг по цене
 	FilterServiceByPrice(ctx context.Context, arg FilterServiceByPriceParams) ([]Service, error)

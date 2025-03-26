@@ -206,7 +206,7 @@ func (server *Server) setupServer() {
 	adminRoutes.DELETE("/category/:id", server.deleteCategoryHandler)
 	adminRoutes.POST("/subtitle-category", server.createSubtitleCategory)
 	adminRoutes.PUT("/subtitle-category", server.updateSubtitleCategory)
-	adminRoutes.DELETE("/subtitle-category/:id", server.deleteSubtitleCategory)
+	adminRoutes.DELETE("/subtitle-category/:id", server.deleteSubcategoryHandler)
 	adminRoutes.POST("/promo-codes", server.createPromoCode)
 	adminRoutes.GET("/reviews/list", server.listReviews)
 	adminRoutes.GET("/services/list", server.listServiceForAdmin)

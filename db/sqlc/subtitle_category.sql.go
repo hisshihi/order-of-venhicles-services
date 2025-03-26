@@ -27,14 +27,17 @@ func (q *Queries) CreateSubtitle(ctx context.Context, name string) (SubtitleCate
 	return i, err
 }
 
-const deleteSubtitleCategory = `-- name: DeleteSubtitleCategory :exec
+const deleteSubtitleCategory = `-- name: DeleteSubtitleCategory :execrows
 DELETE FROM subtitle_category
 WHERE id = $1
 `
 
-func (q *Queries) DeleteSubtitleCategory(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteSubtitleCategory, id)
-	return err
+func (q *Queries) DeleteSubtitleCategory(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteSubtitleCategory, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getSubtitleCategoryByID = `-- name: GetSubtitleCategoryByID :one

@@ -3,9 +3,11 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hisshihi/order-of-venhicles-services/db/sqlc"
+	"github.com/hisshihi/order-of-venhicles-services/internal/db"
 	"github.com/lib/pq"
 )
 
@@ -81,27 +83,39 @@ func (server *Server) updateSubtitleCategory(ctx *gin.Context) {
 	})
 }
 
-func (server *Server) deleteSubtitleCategory(ctx *gin.Context) {
-	var req struct {
-		ID int64 `uri:"id" binding:"required,min=1"`
-	}
+func (server *Server) deleteSubcategoryHandler(ctx *gin.Context) {
+    // Получаем ID подкатегории из параметров URL
+    subcategoryIDStr := ctx.Param("id")
+    subcategoryID, err := strconv.Atoi(subcategoryIDStr)
+    if err != nil {
+        ctx.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID подкатегории"})
+        return
+    }
 
-	if err := ctx.ShouldBindUri(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return
-	}
+    // Параметры для транзакции
+    arg := db.DeleteSubcategoryTxParams{
+        SubcategoryID: int64(subcategoryID),
+    }
 
-	err := server.store.DeleteSubtitleCategory(ctx, req.ID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return
-		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
+    // Выполняем транзакцию
+    result, err := server.store.DeleteSubcategoryTx(ctx, arg)
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
 
-	ctx.JSON(http.StatusNoContent, nil)
+    if !result.DeletedSubcategory {
+        ctx.JSON(http.StatusNotFound, gin.H{"error": "Подкатегория не найдена"})
+        return
+    }
+
+    ctx.JSON(http.StatusOK, gin.H{
+        "message": "Подкатегория успешно удалена",
+        "deleted_data": gin.H{
+            "orders": result.DeletedOrders,
+            "services": result.DeletedServices,
+        },
+    })
 }
 
 

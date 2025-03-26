@@ -125,6 +125,19 @@ func (q *Queries) DeleteServicesByCategoryID(ctx context.Context, categoryID int
 	return result.RowsAffected()
 }
 
+const deleteServicesBySubcategoryID = `-- name: DeleteServicesBySubcategoryID :execrows
+DELETE FROM services
+WHERE subtitle_category_id = $1
+`
+
+func (q *Queries) DeleteServicesBySubcategoryID(ctx context.Context, subtitleCategoryID sql.NullInt64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteServicesBySubcategoryID, subtitleCategoryID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const filterServiceByPrice = `-- name: FilterServiceByPrice :many
 SELECT id, provider_id, category_id, title, description, price, created_at, updated_at, subcategory, country, city, district, subtitle_category_id FROM "services"
 WHERE price >= $1 AND price <= $2

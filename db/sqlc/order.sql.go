@@ -176,6 +176,19 @@ func (q *Queries) DeleteOrdersByCategoryID(ctx context.Context, categoryID int64
 	return result.RowsAffected()
 }
 
+const deleteOrdersBySubcategoryID = `-- name: DeleteOrdersBySubcategoryID :execrows
+DELETE FROM orders
+WHERE subtitle_category_id = $1
+`
+
+func (q *Queries) DeleteOrdersBySubcategoryID(ctx context.Context, subtitleCategoryID sql.NullInt64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteOrdersBySubcategoryID, subtitleCategoryID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const getOrderByID = `-- name: GetOrderByID :one
 SELECT o.id, o.client_id, o.category_id, o.service_id, o.status, o.created_at, o.updated_at, o.provider_accepted, o.provider_message, o.client_message, o.order_date, o.selected_provider_id, o.subtitle_category_id,
     sc.name as category_name,

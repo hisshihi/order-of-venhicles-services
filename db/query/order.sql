@@ -229,3 +229,7 @@ LIMIT $2 OFFSET $3;
 -- name: DeleteOrdersByCategoryID :execrows
 DELETE FROM orders
 WHERE category_id = $1;
+
+-- name: DeleteOrdersBySubcategoryID :execrows
+DELETE FROM orders
+WHERE subtitle_category_id = $1;
