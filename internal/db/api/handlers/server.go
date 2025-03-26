@@ -202,6 +202,9 @@ func (server *Server) setupServer() {
 	adminRoutes.GET("/users/:id", server.getUserByID) // Доступ к данным пользователя по ID
 	adminRoutes.GET("/users/list", server.listUsers)
 	adminRoutes.PUT("/users/update", server.updateUserForAdmin)
+	adminRoutes.POST("/users/block/:id", server.blockUser)
+	adminRoutes.POST("/users/unblock/:id", server.unblockUser)
+	adminRoutes.GET("/users/blocked", server.listBlockedUsers)
 	adminRoutes.POST("/category", server.createCategory)
 	adminRoutes.PUT("/category/:id", server.updateCategory)
 	adminRoutes.DELETE("/category/:id", server.deleteCategoryHandler)
@@ -371,6 +374,14 @@ func (server *Server) authMiddleware() gin.HandlerFunc {
 		if err := payload.Valid(); err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized,
 				errorResponse(errors.New("срок действия токена истек, необходимо пройти авторизацию повторно")))
+			return
+		}
+
+		// Проверяем, не заблокирован ли пользователь
+		user, err := server.store.GetUserByID(c, payload.UserID)
+		if err == nil && user.IsBlocked.Valid && user.IsBlocked.Bool {
+			err := errors.New("ваш аккаунт заблокирован")
+			c.AbortWithStatusJSON(http.StatusForbidden, errorResponse(err))
 			return
 		}
 

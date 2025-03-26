@@ -14,6 +14,7 @@ type Querier interface {
 	AcceptOrderByProviderID(ctx context.Context, arg AcceptOrderByProviderIDParams) (Order, error)
 	// Добавляет услугодателя в избранное клиента
 	AddProviderToFavorites(ctx context.Context, arg AddProviderToFavoritesParams) (Favorite, error)
+	BlockedUser(ctx context.Context, id int64) (sql.NullBool, error)
 	ChangePassword(ctx context.Context, arg ChangePasswordParams) error
 	CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Subscription, error)
 	// Проверяет, оставил ли клиент отзыв по данному заказу
@@ -77,6 +78,7 @@ type Querier interface {
 	GetAllProvidersByPartnerPromos(ctx context.Context, arg GetAllProvidersByPartnerPromosParams) ([]GetAllProvidersByPartnerPromosRow, error)
 	// Получает среднюю оценку услугодателя
 	GetAverageRatingForProvider(ctx context.Context, providerID int64) (GetAverageRatingForProviderRow, error)
+	GetBlockerUser(ctx context.Context, id int64) (GetBlockerUserRow, error)
 	// Получает историю переписки между двумя пользователями
 	GetMessagesByUsers(ctx context.Context, arg GetMessagesByUsersParams) ([]GetMessagesByUsersRow, error)
 	GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, error)
@@ -149,12 +151,14 @@ type Querier interface {
 	HasProviderRespondedToOrder(ctx context.Context, arg HasProviderRespondedToOrderParams) (bool, error)
 	// Получает список доступных заказов для провайдера услуг
 	ListAvailableOrdersForProvider(ctx context.Context, arg ListAvailableOrdersForProviderParams) ([]ListAvailableOrdersForProviderRow, error)
+	ListBlockedUsers(ctx context.Context) ([]ListBlockedUsersRow, error)
 	ListCountAvailableOrdersForProvider(ctx context.Context, providerID int64) (int64, error)
 	ListCountOrdersByClientID(ctx context.Context, clientID int64) (int64, error)
 	ListCountServicesByCatetegory(ctx context.Context, categoryID int64) (int64, error)
 	// Получает список избранных услугодателей клиента
 	ListFavoriteProviders(ctx context.Context, arg ListFavoriteProvidersParams) ([]ListFavoriteProvidersRow, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
+	// Проверка на блокировку провайдера, если он есть
 	ListOrdersByClientID(ctx context.Context, arg ListOrdersByClientIDParams) ([]ListOrdersByClientIDRow, error)
 	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error)
@@ -185,6 +189,7 @@ type Querier interface {
 	// Входные параметры: ID отклика
 	// Возвращает: обновленную запись заказа
 	SelectProviderForOrder(ctx context.Context, dollar_1 sql.NullInt64) (Order, error)
+	UnblockUser(ctx context.Context, id int64) (sql.NullBool, error)
 	// Отменяет выбор провайдера для заказа (транзакционный запрос)
 	// Сбрасывает статус отклика и очищает поле выбранного провайдера в заказе
 	// Входные параметры: ID отклика

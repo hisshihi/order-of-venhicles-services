@@ -93,7 +93,8 @@ func (q *Queries) AcceptOrderByProviderID(ctx context.Context, arg AcceptOrderBy
 }
 
 const countOrders = `-- name: CountOrders :one
-SELECT COUNT(*) FROM "orders"
+SELECT COUNT(*)
+FROM "orders"
 `
 
 func (q *Queries) CountOrders(ctx context.Context) (int64, error) {
@@ -209,6 +210,11 @@ FROM "orders" o
     LEFT JOIN "services" s ON s.id = o.service_id
     LEFT JOIN "users" p ON s.provider_id = p.id
 WHERE o.id = $1
+    AND u.is_blocked = false -- Проверка на блокировку клиента
+    AND (
+        p.id IS NULL
+        OR p.is_blocked = false
+    )
 `
 
 type GetOrderByIDRow struct {
@@ -339,6 +345,7 @@ FROM "orders" o
 WHERE o.category_id = $1
     AND o.status = 'pending'
     AND o.provider_accepted = false
+    AND u.is_blocked = false -- Проверка на блокировку клиента
 ORDER BY o.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -421,6 +428,7 @@ FROM "orders" o
 WHERE o.subtitle_category_id = $1
     AND o.status = 'pending'
     AND o.provider_accepted = false
+    AND u.is_blocked = false -- Проверка на блокировку клиента
 ORDER BY o.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -502,16 +510,9 @@ FROM "orders" o
     JOIN "service_categories" sc ON o.category_id = sc.id
     JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
     JOIN "users" u ON o.client_id = u.id
-WHERE -- Заказ все еще открыт (pending)
-    o.status = 'pending'
-    -- AND -- Провайдер предлагает услуги в этой категории
-    -- o.category_id IN (
-    --     SELECT DISTINCT category_id
-    --     FROM "services"
-    --     WHERE provider_id = $1
-    -- )
-    AND -- Заказ не был принят провайдером
-    o.provider_accepted = false
+WHERE o.status = 'pending'
+    AND o.provider_accepted = false
+    AND u.is_blocked = false -- Проверка на блокировку клиента
 ORDER BY o.created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -586,7 +587,8 @@ func (q *Queries) ListAvailableOrdersForProvider(ctx context.Context, arg ListAv
 }
 
 const listCountAvailableOrdersForProvider = `-- name: ListCountAvailableOrdersForProvider :one
-SELECT COUNT(*) FROM "orders"
+SELECT COUNT(*)
+FROM "orders"
 WHERE status = 'pending'
     AND provider_accepted = false
     AND category_id IN (
@@ -604,7 +606,8 @@ func (q *Queries) ListCountAvailableOrdersForProvider(ctx context.Context, provi
 }
 
 const listCountOrdersByClientID = `-- name: ListCountOrdersByClientID :one
-SELECT COUNT(*) FROM "orders"
+SELECT COUNT(*)
+FROM "orders"
 WHERE client_id = $1
 `
 
@@ -616,7 +619,8 @@ func (q *Queries) ListCountOrdersByClientID(ctx context.Context, clientID int64)
 }
 
 const listOrders = `-- name: ListOrders :many
-SELECT id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date, selected_provider_id, subtitle_category_id FROM "orders"
+SELECT id, client_id, category_id, service_id, status, created_at, updated_at, provider_accepted, provider_message, client_message, order_date, selected_provider_id, subtitle_category_id
+FROM "orders"
 LIMIT $1 OFFSET $2
 `
 
@@ -673,7 +677,13 @@ FROM "orders" o
     JOIN "subtitle_category" suc ON o.subtitle_category_id = suc.id
     LEFT JOIN "services" s ON o.service_id = s.id
     LEFT JOIN "users" p ON s.provider_id = p.id
+    JOIN "users" c ON o.client_id = c.id
 WHERE o.client_id = $1
+    AND c.is_blocked = false -- Проверка на блокировку клиента
+    AND (
+        p.id IS NULL
+        OR p.is_blocked = false
+    ) -- Проверка на блокировку провайдера, если он есть
 ORDER BY o.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -704,6 +714,7 @@ type ListOrdersByClientIDRow struct {
 	ProviderName       sql.NullString   `json:"provider_name"`
 }
 
+// Проверка на блокировку провайдера, если он есть
 func (q *Queries) ListOrdersByClientID(ctx context.Context, arg ListOrdersByClientIDParams) ([]ListOrdersByClientIDRow, error) {
 	rows, err := q.db.QueryContext(ctx, listOrdersByClientID, arg.ClientID, arg.Limit, arg.Offset)
 	if err != nil {

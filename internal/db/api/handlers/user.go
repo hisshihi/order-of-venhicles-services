@@ -588,9 +588,9 @@ func (server *Server) changePassword(ctx *gin.Context) {
 }
 
 type listUsersRequest struct {
-	PageID   int32 `form:"page_id" binding:"required,min=1"`
-	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
-	Search string `form:"search"`
+	PageID   int32  `form:"page_id" binding:"required,min=1"`
+	PageSize int32  `form:"page_size" binding:"required,min=5,max=10"`
+	Search   string `form:"search"`
 }
 
 func (server *Server) listUsers(ctx *gin.Context) {
@@ -628,7 +628,7 @@ func (server *Server) listUsers(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"users": users,
+		"users":       users,
 		"users_count": countUsers,
 	})
 }
@@ -736,4 +736,87 @@ func (server *Server) listProviders(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, providers)
+}
+
+// Структура запроса с ID пользователя
+type userIDRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+// Обработчик для блокировки пользователя
+func (server *Server) blockUser(ctx *gin.Context) {
+	var req userIDRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// Проверяем существование пользователя
+	user, err := server.store.GetUserByID(ctx, req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(errors.New("пользователь не найден")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	// Блокируем пользователя
+	blocked, err := server.store.BlockedUser(ctx, req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"user_id":  req.ID,
+		"username": user.Username,
+		"blocked":  blocked,
+		"message":  "пользователь успешно заблокирован",
+	})
+}
+
+// Обработчик для разблокировки пользователя
+func (server *Server) unblockUser(ctx *gin.Context) {
+	var req userIDRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	// Проверяем существование пользователя
+	user, err := server.store.GetUserByID(ctx, req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(errors.New("пользователь не найден")))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	unblocked, err := server.store.UnblockUser(ctx, req.ID)
+	if err != nil {
+	    ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	    return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"user_id":  req.ID,
+		"username": user.Username,
+		"blocked":  unblocked,
+		"message":  "пользователь успешно разблокирован",
+	})
+}
+
+// Обработчик для получения списка заблокированных пользователей
+func (server *Server) listBlockedUsers(ctx *gin.Context) {
+	users, err := server.store.ListBlockedUsers(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, users)
 }

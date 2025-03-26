@@ -33,13 +33,16 @@ SELECT s.*,
 FROM "services" s
     JOIN "users" u ON s.provider_id = u.id
     JOIN "service_categories" sc ON s.category_id = sc.id
-WHERE s.id = $1;
+WHERE s.id = $1
+    AND u.is_blocked = false;
 -- name: GetServicesByProviderID :many
 SELECT s.*,
     sc.name as category_name
 FROM "services" s
     JOIN "service_categories" sc ON s.category_id = sc.id
+    JOIN "users" u ON s.provider_id = u.id
 WHERE s.provider_id = $1
+    AND u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3;
 -- name: UpdateService :one
@@ -69,13 +72,13 @@ SELECT s.*,
 FROM "services" s
     JOIN "users" u ON s.provider_id = u.id
     JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $1 OFFSET $2;
-
 -- name: ListCountServicesByCatetegory :one
-SELECT COUNT(*) FROM "services"
+SELECT COUNT(*)
+FROM "services"
 WHERE category_id = $1;
-
 -- name: ListServicesByCategory :many
 SELECT s.*,
     u.username as provider_name,
@@ -85,6 +88,7 @@ FROM "services" s
     JOIN "users" u ON s.provider_id = u.id
     JOIN "service_categories" sc ON s.category_id = sc.id
 WHERE s.category_id = $1
+    AND u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3;
 -- name: ListServicesByLocation :many
@@ -107,6 +111,7 @@ WHERE (
         $3::text IS NULL
         OR s.district = $3
     )
+    AND u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $4 OFFSET $5;
 -- name: SearchServices :many
@@ -123,41 +128,43 @@ WHERE (
         OR s.title ILIKE '%' || $1 || '%'
         OR s.description ILIKE '%' || $1 || '%'
     )
+    AND u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3;
-
 -- name: ListServicesByProviderIDAndCategory :many
 SELECT s.*,
     sc.name as category_name
 FROM "services" s
     JOIN "service_categories" sc ON s.category_id = sc.id
+    JOIN "users" u ON s.provider_id = u.id
 WHERE s.provider_id = $1
-    AND s.category_id = $2;
-
+    AND s.category_id = $2
+    AND u.is_blocked = false;
 -- name: ListServicesByProviderIDAndSubCategory :many
 SELECT s.*,
     sc.name as subcategory_name
 FROM "services" s
     JOIN "subtitle_category" sc ON s.subtitle_category_id = sc.id
+    JOIN "users" u ON s.provider_id = u.id
 WHERE s.provider_id = $1
-    AND s.subtitle_category_id = $2;
-
+    AND s.subtitle_category_id = $2
+    AND u.is_blocked = false;
 -- name: CountServicesByProviderID :one
-SELECT COUNT(*) FROM "services"
+SELECT COUNT(*)
+FROM "services"
 WHERE provider_id = $1;
-
 -- Фильтрация услуг по цене
 -- name: FilterServiceByPrice :many
-SELECT * FROM "services"
-WHERE price >= $1 AND price <= $2;
-
+SELECT *
+FROM "services"
+WHERE price >= $1
+    AND price <= $2;
 -- name: CountService :one
-SELECT COUNT(*) FROM "services";
-
+SELECT COUNT(*)
+FROM "services";
 -- name: DeleteServicesByCategoryID :execrows
 DELETE FROM services
 WHERE category_id = $1;
-
 -- name: DeleteServicesBySubcategoryID :execrows
 DELETE FROM services
 WHERE subtitle_category_id = $1;

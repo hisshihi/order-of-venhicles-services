@@ -12,7 +12,8 @@ import (
 )
 
 const countService = `-- name: CountService :one
-SELECT COUNT(*) FROM "services"
+SELECT COUNT(*)
+FROM "services"
 `
 
 func (q *Queries) CountService(ctx context.Context) (int64, error) {
@@ -23,7 +24,8 @@ func (q *Queries) CountService(ctx context.Context) (int64, error) {
 }
 
 const countServicesByProviderID = `-- name: CountServicesByProviderID :one
-SELECT COUNT(*) FROM "services"
+SELECT COUNT(*)
+FROM "services"
 WHERE provider_id = $1
 `
 
@@ -139,8 +141,10 @@ func (q *Queries) DeleteServicesBySubcategoryID(ctx context.Context, subtitleCat
 }
 
 const filterServiceByPrice = `-- name: FilterServiceByPrice :many
-SELECT id, provider_id, category_id, title, description, price, created_at, updated_at, subcategory, country, city, district, subtitle_category_id FROM "services"
-WHERE price >= $1 AND price <= $2
+SELECT id, provider_id, category_id, title, description, price, created_at, updated_at, subcategory, country, city, district, subtitle_category_id
+FROM "services"
+WHERE price >= $1
+    AND price <= $2
 `
 
 type FilterServiceByPriceParams struct {
@@ -207,6 +211,7 @@ FROM "services" s
     JOIN "users" u ON s.provider_id = u.id
     JOIN "service_categories" sc ON s.category_id = sc.id
 WHERE s.id = $1
+    AND u.is_blocked = false
 `
 
 type GetServiceByIDRow struct {
@@ -265,7 +270,9 @@ SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.cr
     sc.name as category_name
 FROM "services" s
     JOIN "service_categories" sc ON s.category_id = sc.id
+    JOIN "users" u ON s.provider_id = u.id
 WHERE s.provider_id = $1
+    AND u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -332,7 +339,8 @@ func (q *Queries) GetServicesByProviderID(ctx context.Context, arg GetServicesBy
 }
 
 const listCountServicesByCatetegory = `-- name: ListCountServicesByCatetegory :one
-SELECT COUNT(*) FROM "services"
+SELECT COUNT(*)
+FROM "services"
 WHERE category_id = $1
 `
 
@@ -351,6 +359,7 @@ SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.cr
 FROM "services" s
     JOIN "users" u ON s.provider_id = u.id
     JOIN "service_categories" sc ON s.category_id = sc.id
+WHERE u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -428,6 +437,7 @@ FROM "services" s
     JOIN "users" u ON s.provider_id = u.id
     JOIN "service_categories" sc ON s.category_id = sc.id
 WHERE s.category_id = $1
+    AND u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -517,6 +527,7 @@ WHERE (
         $3::text IS NULL
         OR s.district = $3
     )
+    AND u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $4 OFFSET $5
 `
@@ -599,8 +610,10 @@ SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.cr
     sc.name as category_name
 FROM "services" s
     JOIN "service_categories" sc ON s.category_id = sc.id
+    JOIN "users" u ON s.provider_id = u.id
 WHERE s.provider_id = $1
     AND s.category_id = $2
+    AND u.is_blocked = false
 `
 
 type ListServicesByProviderIDAndCategoryParams struct {
@@ -668,8 +681,10 @@ SELECT s.id, s.provider_id, s.category_id, s.title, s.description, s.price, s.cr
     sc.name as subcategory_name
 FROM "services" s
     JOIN "subtitle_category" sc ON s.subtitle_category_id = sc.id
+    JOIN "users" u ON s.provider_id = u.id
 WHERE s.provider_id = $1
     AND s.subtitle_category_id = $2
+    AND u.is_blocked = false
 `
 
 type ListServicesByProviderIDAndSubCategoryParams struct {
@@ -746,6 +761,7 @@ WHERE (
         OR s.title ILIKE '%' || $1 || '%'
         OR s.description ILIKE '%' || $1 || '%'
     )
+    AND u.is_blocked = false
 ORDER BY s.created_at DESC
 LIMIT $2 OFFSET $3
 `

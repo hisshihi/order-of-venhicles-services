@@ -24,49 +24,48 @@ VALUES (
         $10
     )
 RETURNING *;
-
 -- name: GetUserByIDFromAdmin :one
-SELECT * FROM users
+SELECT *
+FROM users
 WHERE id = $1;
-
 -- name: GetUserByIDFromUser :one
-SELECT * FROM users
+SELECT *
+FROM users
 WHERE id = $1
 LIMIT 1;
-
 -- name: GetUserByEmail :one
-SELECT * FROM users
+SELECT *
+FROM users
 WHERE email = $1
 LIMIT 1;
-
 -- name: GetUserByID :one
-SELECT * FROM users
+SELECT *
+FROM users
 WHERE id = $1
 LIMIT 1;
-
 -- name: ListUsersByUsername :many
-SELECT * FROM users
+SELECT *
+FROM users
 WHERE username ILIKE '%' || $1 || '%'
 ORDER BY username;
-
 -- name: ListUsersByEmail :many
-SELECT * FROM users
+SELECT *
+FROM users
 WHERE email ILIKE '%' || $1 || '%'
 ORDER BY email;
-
 -- name: ListUsersByRole :many
-SELECT * FROM users
+SELECT *
+FROM users
 WHERE role = $1
 ORDER BY username;
-
 -- name: ListUsers :many
-SELECT * FROM users
+SELECT *
+FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
-
 -- name: CountUsers :one
-SELECT COUNT(*) FROM users;
-
+SELECT COUNT(*)
+FROM users;
 -- name: UpdateUser :one
 UPDATE users
 SET username = $2,
@@ -80,17 +79,37 @@ SET username = $2,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
-
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = $1;
-
 -- name: ChangePassword :exec
 UPDATE users
 SET password_hash = $2,
     password_change_at = NOW()
 WHERE id = $1;
-
 -- name: ListProviders :many
-SELECT id, username, email FROM users
+SELECT id,
+    username,
+    email
+FROM users
 WHERE role = 'provider';
+-- name: BlockedUser :one
+UPDATE users
+SET is_blocked = true
+WHERE id = $1
+RETURNING is_blocked;
+-- name: ListBlockedUsers :many
+SELECT id,
+    is_blocked
+FROM users
+WHERE is_blocked = true;
+-- name: GetBlockerUser :one
+SELECT id,
+    is_blocked
+FROM users
+WHERE id = $1;
+-- name: UnblockUser :one
+UPDATE users
+SET is_blocked = false
+WHERE id = $1
+RETURNING is_blocked;

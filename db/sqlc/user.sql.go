@@ -10,6 +10,20 @@ import (
 	"database/sql"
 )
 
+const blockedUser = `-- name: BlockedUser :one
+UPDATE users
+SET is_blocked = true
+WHERE id = $1
+RETURNING is_blocked
+`
+
+func (q *Queries) BlockedUser(ctx context.Context, id int64) (sql.NullBool, error) {
+	row := q.db.QueryRowContext(ctx, blockedUser, id)
+	var is_blocked sql.NullBool
+	err := row.Scan(&is_blocked)
+	return is_blocked, err
+}
+
 const changePassword = `-- name: ChangePassword :exec
 UPDATE users
 SET password_hash = $2,
@@ -28,7 +42,8 @@ func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) 
 }
 
 const countUsers = `-- name: CountUsers :one
-SELECT COUNT(*) FROM users
+SELECT COUNT(*)
+FROM users
 `
 
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
@@ -125,8 +140,28 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
+const getBlockerUser = `-- name: GetBlockerUser :one
+SELECT id,
+    is_blocked
+FROM users
+WHERE id = $1
+`
+
+type GetBlockerUserRow struct {
+	ID        int64        `json:"id"`
+	IsBlocked sql.NullBool `json:"is_blocked"`
+}
+
+func (q *Queries) GetBlockerUser(ctx context.Context, id int64) (GetBlockerUserRow, error) {
+	row := q.db.QueryRowContext(ctx, getBlockerUser, id)
+	var i GetBlockerUserRow
+	err := row.Scan(&i.ID, &i.IsBlocked)
+	return i, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+FROM users
 WHERE email = $1
 LIMIT 1
 `
@@ -157,7 +192,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+FROM users
 WHERE id = $1
 LIMIT 1
 `
@@ -188,7 +224,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 }
 
 const getUserByIDFromAdmin = `-- name: GetUserByIDFromAdmin :one
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+FROM users
 WHERE id = $1
 `
 
@@ -218,7 +255,8 @@ func (q *Queries) GetUserByIDFromAdmin(ctx context.Context, id int64) (User, err
 }
 
 const getUserByIDFromUser = `-- name: GetUserByIDFromUser :one
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+FROM users
 WHERE id = $1
 LIMIT 1
 `
@@ -248,8 +286,46 @@ func (q *Queries) GetUserByIDFromUser(ctx context.Context, id int64) (User, erro
 	return i, err
 }
 
+const listBlockedUsers = `-- name: ListBlockedUsers :many
+SELECT id,
+    is_blocked
+FROM users
+WHERE is_blocked = true
+`
+
+type ListBlockedUsersRow struct {
+	ID        int64        `json:"id"`
+	IsBlocked sql.NullBool `json:"is_blocked"`
+}
+
+func (q *Queries) ListBlockedUsers(ctx context.Context) ([]ListBlockedUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBlockedUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListBlockedUsersRow{}
+	for rows.Next() {
+		var i ListBlockedUsersRow
+		if err := rows.Scan(&i.ID, &i.IsBlocked); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProviders = `-- name: ListProviders :many
-SELECT id, username, email FROM users
+SELECT id,
+    username,
+    email
+FROM users
 WHERE role = 'provider'
 `
 
@@ -283,7 +359,8 @@ func (q *Queries) ListProviders(ctx context.Context) ([]ListProvidersRow, error)
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -335,7 +412,8 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 }
 
 const listUsersByEmail = `-- name: ListUsersByEmail :many
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+FROM users
 WHERE email ILIKE '%' || $1 || '%'
 ORDER BY email
 `
@@ -382,7 +460,8 @@ func (q *Queries) ListUsersByEmail(ctx context.Context, dollar_1 sql.NullString)
 }
 
 const listUsersByRole = `-- name: ListUsersByRole :many
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+FROM users
 WHERE role = $1
 ORDER BY username
 `
@@ -429,7 +508,8 @@ func (q *Queries) ListUsersByRole(ctx context.Context, role NullRole) ([]User, e
 }
 
 const listUsersByUsername = `-- name: ListUsersByUsername :many
-SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
+SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+FROM users
 WHERE username ILIKE '%' || $1 || '%'
 ORDER BY username
 `
@@ -473,6 +553,20 @@ func (q *Queries) ListUsersByUsername(ctx context.Context, dollar_1 sql.NullStri
 		return nil, err
 	}
 	return items, nil
+}
+
+const unblockUser = `-- name: UnblockUser :one
+UPDATE users
+SET is_blocked = false
+WHERE id = $1
+RETURNING is_blocked
+`
+
+func (q *Queries) UnblockUser(ctx context.Context, id int64) (sql.NullBool, error) {
+	row := q.db.QueryRowContext(ctx, unblockUser, id)
+	var is_blocked sql.NullBool
+	err := row.Scan(&is_blocked)
+	return is_blocked, err
 }
 
 const updateUser = `-- name: UpdateUser :one
