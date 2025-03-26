@@ -45,13 +45,29 @@ func (q *Queries) CreateSupportMessage(ctx context.Context, arg CreateSupportMes
 	return i, err
 }
 
+const deleteSupportMessage = `-- name: DeleteSupportMessage :exec
+DELETE FROM "support_messages"
+WHERE id = $1
+`
+
+func (q *Queries) DeleteSupportMessage(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteSupportMessage, id)
+	return err
+}
+
 const listSupportMessages = `-- name: ListSupportMessages :many
 SELECT id, sender_id, subject, messages, created_at FROM "support_messages"
 ORDER BY "created_at"
+LIMIT $1 OFFSET $2
 `
 
-func (q *Queries) ListSupportMessages(ctx context.Context) ([]SupportMessage, error) {
-	rows, err := q.db.QueryContext(ctx, listSupportMessages)
+type ListSupportMessagesParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+func (q *Queries) ListSupportMessages(ctx context.Context, arg ListSupportMessagesParams) ([]SupportMessage, error) {
+	rows, err := q.db.QueryContext(ctx, listSupportMessages, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

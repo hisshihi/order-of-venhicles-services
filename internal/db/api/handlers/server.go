@@ -119,6 +119,7 @@ func (server *Server) setupServer() {
 	authRoutes := apiGroup.Group("/auth")
 	authRoutes.Use(server.authMiddleware())
 	authRoutes.GET("/users/me", server.getCurrentUser)
+	authRoutes.POST("/support-messages", server.createSupportMessage)
 
 	// Защищённые маршруты с ролевым доступом
 	// Маршруты для клиентов
@@ -214,6 +215,8 @@ func (server *Server) setupServer() {
 	adminRoutes.GET("/orders/list", server.listOrdersFromAdmin)
 	adminRoutes.GET("/subscriptions/list", server.listSubscriptions)
 	adminRoutes.GET("/providers/list", server.listProviders)
+	adminRoutes.GET("/support-messages", server.listSupportMessages)
+	adminRoutes.DELETE("/support-messages/:id", server.deleteSupportMessage)
 
 	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
 	// ----------------------------------------------------

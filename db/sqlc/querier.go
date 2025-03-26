@@ -68,6 +68,7 @@ type Querier interface {
 	DeleteServicesBySubcategoryID(ctx context.Context, subtitleCategoryID sql.NullInt64) (int64, error)
 	DeleteSubscription(ctx context.Context, id int64) error
 	DeleteSubtitleCategory(ctx context.Context, id int64) (int64, error)
+	DeleteSupportMessage(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
 	// Фильтрация услуг по цене
 	FilterServiceByPrice(ctx context.Context, arg FilterServiceByPriceParams) ([]Service, error)
@@ -169,7 +170,7 @@ type Querier interface {
 	ListSubscriptions(ctx context.Context, arg ListSubscriptionsParams) ([]Subscription, error)
 	ListSubscriptionsByProviderID(ctx context.Context, arg ListSubscriptionsByProviderIDParams) ([]Subscription, error)
 	ListSubtitleCategory(ctx context.Context) ([]SubtitleCategory, error)
-	ListSupportMessages(ctx context.Context) ([]SupportMessage, error)
+	ListSupportMessages(ctx context.Context, arg ListSupportMessagesParams) ([]SupportMessage, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	ListUsersByEmail(ctx context.Context, dollar_1 sql.NullString) ([]User, error)
 	ListUsersByRole(ctx context.Context, role NullRole) ([]User, error)
