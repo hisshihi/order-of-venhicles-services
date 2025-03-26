@@ -225,3 +225,7 @@ WHERE o.subtitle_category_id = $1
     AND o.provider_accepted = false
 ORDER BY o.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- name: DeleteOrdersByCategoryID :execrows
+DELETE FROM orders
+WHERE category_id = $1;

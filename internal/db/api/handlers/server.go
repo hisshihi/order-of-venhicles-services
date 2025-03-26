@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"slices"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/hisshihi/order-of-venhicles-services/db/sqlc"
@@ -21,7 +23,6 @@ import (
 	"github.com/hisshihi/order-of-venhicles-services/pkg/util"
 	"github.com/lib/pq"
 	"golang.org/x/time/rate"
-	"slices"
 )
 
 const (
@@ -202,7 +203,7 @@ func (server *Server) setupServer() {
 	adminRoutes.PUT("/users/update", server.updateUserForAdmin)
 	adminRoutes.POST("/category", server.createCategory)
 	adminRoutes.PUT("/category/:id", server.updateCategory)
-	adminRoutes.DELETE("/category/:id", server.deleteCategory)
+	adminRoutes.DELETE("/category/:id", server.deleteCategoryHandler)
 	adminRoutes.POST("/subtitle-category", server.createSubtitleCategory)
 	adminRoutes.PUT("/subtitle-category", server.updateSubtitleCategory)
 	adminRoutes.DELETE("/subtitle-category/:id", server.deleteSubtitleCategory)

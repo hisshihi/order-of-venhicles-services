@@ -21,6 +21,6 @@ SET name = $2, icon = $3, description = $4, slug = $5, updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteServiceCategory :exec
+-- name: DeleteServiceCategory :execrows
 DELETE FROM service_categories
 WHERE id = $1;

@@ -52,13 +52,15 @@ type Querier interface {
 	// Входные параметры: ID отклика
 	// Возвращает: ничего
 	DeleteOrderResponse(ctx context.Context, id int64) error
+	DeleteOrdersByCategoryID(ctx context.Context, categoryID int64) (int64, error)
 	DeletePayment(ctx context.Context, id int64) error
 	DeletePendingSubscriptionByPaymentID(ctx context.Context, paymentID int64) error
 	DeletePromoCode(ctx context.Context, id int64) error
 	// Удаляет отзыв (только если пользователь является автором или администратором)
 	DeleteReview(ctx context.Context, arg DeleteReviewParams) error
 	DeleteService(ctx context.Context, arg DeleteServiceParams) error
-	DeleteServiceCategory(ctx context.Context, id int64) error
+	DeleteServiceCategory(ctx context.Context, id int64) (int64, error)
+	DeleteServicesByCategoryID(ctx context.Context, categoryID int64) (int64, error)
 	DeleteSubscription(ctx context.Context, id int64) error
 	DeleteSubtitleCategory(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error

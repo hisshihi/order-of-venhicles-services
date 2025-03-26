@@ -153,3 +153,7 @@ WHERE price >= $1 AND price <= $2;
 
 -- name: CountService :one
 SELECT COUNT(*) FROM "services";
+
+-- name: DeleteServicesByCategoryID :execrows
+DELETE FROM services
+WHERE category_id = $1;

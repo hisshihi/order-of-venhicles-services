@@ -42,14 +42,17 @@ func (q *Queries) CreateServiceCategory(ctx context.Context, arg CreateServiceCa
 	return i, err
 }
 
-const deleteServiceCategory = `-- name: DeleteServiceCategory :exec
+const deleteServiceCategory = `-- name: DeleteServiceCategory :execrows
 DELETE FROM service_categories
 WHERE id = $1
 `
 
-func (q *Queries) DeleteServiceCategory(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteServiceCategory, id)
-	return err
+func (q *Queries) DeleteServiceCategory(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteServiceCategory, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getServiceCategoryByID = `-- name: GetServiceCategoryByID :one
