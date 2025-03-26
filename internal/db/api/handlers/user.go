@@ -48,7 +48,7 @@ type createUserResponse struct {
 }
 
 func (server *Server) createUser(ctx *gin.Context) {
-	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, 1<<20+1024)
+	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, 3*1024*1024)
 
 	var req createUserRequest
 	if err := ctx.ShouldBind(&req); err != nil {
@@ -71,8 +71,8 @@ func (server *Server) createUser(ctx *gin.Context) {
 
 	var photoBytes []byte
 	if req.PhotoUrl != nil {
-		if req.PhotoUrl.Size > 1<<20 {
-			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 1МБ")))
+		if req.PhotoUrl.Size > 3*1024*1024 {
+			ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 3МБ")))
 			return
 		}
 
@@ -476,8 +476,8 @@ func (server *Server) updateUser(ctx *gin.Context) {
 	if req.PhotoUrl.Header != nil {
 		if req.PhotoUrl != nil {
 			log.Println("Файл загружен:", req.PhotoUrl.Filename)
-			if req.PhotoUrl.Size > 1<<20 {
-				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 1МБ")))
+			if req.PhotoUrl.Size > 3*1024*1024 {
+				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 3МБ")))
 				return
 			}
 
@@ -663,8 +663,8 @@ func (server *Server) updateUserForAdmin(ctx *gin.Context) {
 	if req.PhotoUrl.Header != nil {
 		if req.PhotoUrl != nil {
 			log.Println("Файл загружен:", req.PhotoUrl.Filename)
-			if req.PhotoUrl.Size > 1<<20 {
-				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 1МБ")))
+			if req.PhotoUrl.Size > 3*1024*1024 {
+				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 3МБ")))
 				return
 			}
 
