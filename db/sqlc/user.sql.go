@@ -248,6 +248,40 @@ func (q *Queries) GetUserByIDFromUser(ctx context.Context, id int64) (User, erro
 	return i, err
 }
 
+const listProviders = `-- name: ListProviders :many
+SELECT id, username, email FROM users
+WHERE role = 'provider'
+`
+
+type ListProvidersRow struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
+func (q *Queries) ListProviders(ctx context.Context) ([]ListProvidersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProviders)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProvidersRow{}
+	for rows.Next() {
+		var i ListProvidersRow
+		if err := rows.Scan(&i.ID, &i.Username, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
 SELECT id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked FROM users
 ORDER BY created_at DESC

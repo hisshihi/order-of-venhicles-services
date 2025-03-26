@@ -130,6 +130,43 @@ func (server *Server) listPromoCodes(ctx *gin.Context) {
 	})
 }
 
+func (server *Server) listPromoCodesByPartner(ctx *gin.Context) {
+	var req listPromoCodesRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	user, err := server.getUserDataFromToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.ListPromoCodesByPartnerIDParams{
+		PartnerID: user.ID,
+		Limit: int64(req.PageSize),
+		Offset: int64((req.PageID - 1) * req.PageSize),
+	}
+
+	promoCodes, err := server.store.ListPromoCodesByPartnerID(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	countPromoCodes, err := server.store.CountPromoCode(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"promo_codes": promoCodes,
+		"promo_codes_count": countPromoCodes,
+	})
+}
+
 // TODO: реализовать получение всех провайдеров использующих промокод партнёра
 type getAllProvidersByPartnerPromosRequest struct {
 	PageID int32 `form:"page_id" binding:"required,min=1"`

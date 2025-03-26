@@ -90,3 +90,7 @@ UPDATE users
 SET password_hash = $2,
     password_change_at = NOW()
 WHERE id = $1;
+
+-- name: ListProviders :many
+SELECT id, username, email FROM users
+WHERE role = 'provider';

@@ -191,7 +191,7 @@ func (server *Server) setupServer() {
 	subscriptionPartnerRequiredRoutes.Use(server.subscriptionCheckMiddleware())
 	// Добавьте здесь маршруты для партнеров
 	subscriptionPartnerRequiredRoutes.GET("/subscriptions/provider", server.listSubsciptionsByProviderID)
-	subscriptionPartnerRequiredRoutes.GET("/promo-codes/list", server.listPromoCodes)
+	subscriptionPartnerRequiredRoutes.GET("/promo-codes/list", server.listPromoCodesByPartner)
 	subscriptionPartnerRequiredRoutes.GET("/promo-codes/list/provider", server.getAllProvidersByPartnerPromos)
 
 	// Маршруты только для администраторов
@@ -208,10 +208,12 @@ func (server *Server) setupServer() {
 	adminRoutes.PUT("/subtitle-category", server.updateSubtitleCategory)
 	adminRoutes.DELETE("/subtitle-category/:id", server.deleteSubcategoryHandler)
 	adminRoutes.POST("/promo-codes", server.createPromoCode)
+	adminRoutes.GET("/promo-codes/list", server.listPromoCodes)
 	adminRoutes.GET("/reviews/list", server.listReviews)
 	adminRoutes.GET("/services/list", server.listServiceForAdmin)
 	adminRoutes.GET("/orders/list", server.listOrdersFromAdmin)
 	adminRoutes.GET("/subscriptions/list", server.listSubscriptions)
+	adminRoutes.GET("/providers/list", server.listProviders)
 
 	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
 	// ----------------------------------------------------

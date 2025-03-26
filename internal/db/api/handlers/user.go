@@ -727,3 +727,13 @@ func (server *Server) updateUserForAdmin(ctx *gin.Context) {
 		"user": rsp,
 	})
 }
+
+func (server *Server) listProviders(ctx *gin.Context) {
+	providers, err := server.store.ListProviders(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, providers)
+}
