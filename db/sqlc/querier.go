@@ -29,6 +29,7 @@ type Querier interface {
 	CountReviews(ctx context.Context) (int64, error)
 	CountService(ctx context.Context) (int64, error)
 	CountServicesByProviderID(ctx context.Context, providerID int64) (int64, error)
+	CountSubscriptions(ctx context.Context) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
 	// Создает новое сообщение
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)

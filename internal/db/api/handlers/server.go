@@ -211,6 +211,7 @@ func (server *Server) setupServer() {
 	adminRoutes.GET("/reviews/list", server.listReviews)
 	adminRoutes.GET("/services/list", server.listServiceForAdmin)
 	adminRoutes.GET("/orders/list", server.listOrdersFromAdmin)
+	adminRoutes.GET("/subscriptions/list", server.listSubscriptions)
 
 	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
 	// ----------------------------------------------------

@@ -431,3 +431,39 @@ func (server *Server) subscriptionCheckMiddleware() gin.HandlerFunc {
 		ctx.Next()
 	}
 }
+
+
+type listSubsciptionsRequest struct {
+	PageID     int32 `form:"page_id" binding:"min=1,required"`
+	PageSize   int32 `form:"page_size" binding:"min=5,max=10,required"`
+}
+
+func (server *Server) listSubscriptions(ctx *gin.Context) {
+	var req listSubsciptionsRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := sqlc.ListSubscriptionsParams{
+		Limit: int64(req.PageSize),
+		Offset: int64((req.PageID - 1) * req.PageSize),
+	}
+
+	subscriptions, err := server.store.ListSubscriptions(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	subscriptionsCount, err := server.store.CountSubscriptions(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"subscriptions": subscriptions,
+		"subscriptions_count": subscriptionsCount,
+	})
+}

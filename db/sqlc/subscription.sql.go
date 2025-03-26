@@ -55,6 +55,17 @@ func (q *Queries) CheckAndUpdateExpiredSubscriptions(ctx context.Context) ([]Sub
 	return items, nil
 }
 
+const countSubscriptions = `-- name: CountSubscriptions :one
+SELECT COUNT(*) FROM "subscriptions"
+`
+
+func (q *Queries) CountSubscriptions(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countSubscriptions)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSubscription = `-- name: CreateSubscription :one
 INSERT INTO subscriptions (provider_id, start_date, subscription_type, promo_code_id, price, end_date, status, original_price)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

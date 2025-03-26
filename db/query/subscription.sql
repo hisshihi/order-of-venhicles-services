@@ -52,3 +52,6 @@ SET status = 'expired',
 WHERE status = 'active'
     AND end_date <= NOW()
 RETURNING *;
+
+-- name: CountSubscriptions :one
+SELECT COUNT(*) FROM "subscriptions";

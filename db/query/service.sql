@@ -157,3 +157,7 @@ SELECT COUNT(*) FROM "services";
 -- name: DeleteServicesByCategoryID :execrows
 DELETE FROM services
 WHERE category_id = $1;
+
+-- name: DeleteServicesBySubcategoryID :execrows
+DELETE FROM services
+WHERE subtitle_category_id = $1;
