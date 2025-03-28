@@ -1,6 +1,6 @@
 module github.com/hisshihi/order-of-venhicles-services
 
-go 1.23.6
+go 1.24.1
 
 require (
 	github.com/aead/chacha20poly1305 v0.0.0-20170617001512-233f39982aeb
