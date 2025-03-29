@@ -261,7 +261,7 @@ func (server *Server) listServiceFromProvider(ctx *gin.Context) {
 }
 
 type listServicesByCategoryIDRequest struct {
-	CategoryID    int64  `form:"category_id" binding:"min=1,required"`
+	CategoryID    int64  `form:"category_id"`
 	PageID        int32  `form:"page_id" binding:"min=1,required"`
 	PageSize      int32  `form:"page_size" binding:"min=5,max=10,required"`
 	SubCategoryID int64  `form:"subcategory_id,string"`
@@ -277,27 +277,32 @@ func (server *Server) listServiceByCategoryID(ctx *gin.Context) {
 		return
 	}
 
-	arg := sqlc.ListServicesByCategoryParams{
-		CategoryID: req.CategoryID,
+	arg := sqlc.ListServicesParams{
 		Limit:      int64(req.PageSize),
 		Offset:     int64((req.PageID - 1) * req.PageSize),
 	}
 
-	services, err := server.store.ListServicesByCategory(ctx, arg)
+	services, err := server.store.ListServices(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	servicesSize, err := server.store.ListCountServicesByCatetegory(ctx, req.CategoryID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return
-	}
+	// servicesSize, err := server.store.ListCountServicesByCatetegory(ctx, req.CategoryID)
+	// if err != nil {
+	// 	ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+	// 	return
+	// }
 
 	// Применяем фильтрацию
-	servicesResult := []sqlc.ListServicesByCategoryRow{}
+	servicesResult := []sqlc.ListServicesRow{}
 	for _, service := range services {
+		if req.CategoryID != 0 {
+			if service.CategoryID != req.CategoryID {
+				continue
+			}
+		}
+
 		// Проверяем подкатегорию, если она задана
 		if req.SubCategoryID != 0 {
 			if service.SubtitleCategoryID.Int64 != req.SubCategoryID {
@@ -333,7 +338,7 @@ func (server *Server) listServiceByCategoryID(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"service":      servicesResult,
-		"service_size": servicesSize,
+		"service_size": len(servicesResult),
 	})
 }
 
