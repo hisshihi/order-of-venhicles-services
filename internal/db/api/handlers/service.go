@@ -261,12 +261,13 @@ func (server *Server) listServiceFromProvider(ctx *gin.Context) {
 }
 
 type listServicesByCategoryIDRequest struct {
-	CategoryID    int64         `form:"category_id" binding:"min=1,required"`
-	PageID        int32         `form:"page_id" binding:"min=1,required"`
-	PageSize      int32         `form:"page_size" binding:"min=5,max=10,required"`
-	SubCategoryID int64 `form:"subcategory_id,string"`
-	MinPrice      int64 `form:"min_price,string"`
-	MaxPrice      int64 `form:"max_price,string"`
+	CategoryID    int64  `form:"category_id" binding:"min=1,required"`
+	PageID        int32  `form:"page_id" binding:"min=1,required"`
+	PageSize      int32  `form:"page_size" binding:"min=5,max=10,required"`
+	SubCategoryID int64  `form:"subcategory_id,string"`
+	MinPrice      int64  `form:"min_price,string"`
+	MaxPrice      int64  `form:"max_price,string"`
+	CityFilter    string `form:"city_filter"`
 }
 
 func (server *Server) listServiceByCategoryID(ctx *gin.Context) {
@@ -320,6 +321,12 @@ func (server *Server) listServiceByCategoryID(ctx *gin.Context) {
 			}
 		}
 
+		if req.CityFilter != "all" {
+			if req.CityFilter != service.City.String {
+				continue
+			}
+		}
+
 		// Если прошли все фильтры, добавляем сервис в результат
 		servicesResult = append(servicesResult, service)
 	}
@@ -352,8 +359,8 @@ func (server *Server) listService(ctx *gin.Context) {
 }
 
 type listServicesForAdminRequest struct {
-	PageID     int32 `form:"page_id" binding:"min=1,required"`
-	PageSize   int32 `form:"page_size" binding:"min=5,max=10,required"`
+	PageID   int32 `form:"page_id" binding:"min=1,required"`
+	PageSize int32 `form:"page_size" binding:"min=5,max=10,required"`
 }
 
 func (server *Server) listServiceForAdmin(ctx *gin.Context) {
@@ -381,7 +388,7 @@ func (server *Server) listServiceForAdmin(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"services": services,
+		"services":      services,
 		"count_service": countService,
 	})
 }
