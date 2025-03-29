@@ -33,6 +33,7 @@ type Querier interface {
 	CountSubscriptions(ctx context.Context) (int64, error)
 	CountSupportMessages(ctx context.Context) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
+	CreateCity(ctx context.Context, name string) (City, error)
 	// Создает новое сообщение
 	CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error)
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
@@ -51,6 +52,7 @@ type Querier interface {
 	CreateSubtitle(ctx context.Context, name string) (SubtitleCategory, error)
 	CreateSupportMessage(ctx context.Context, arg CreateSupportMessageParams) (SupportMessage, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteCity(ctx context.Context, id int64) error
 	DeleteOrder(ctx context.Context, id int64) error
 	// Удаляет отклик по его ID
 	// Входные параметры: ID отклика
@@ -79,6 +81,7 @@ type Querier interface {
 	// Получает среднюю оценку услугодателя
 	GetAverageRatingForProvider(ctx context.Context, providerID int64) (GetAverageRatingForProviderRow, error)
 	GetBlockerUser(ctx context.Context, id int64) (GetBlockerUserRow, error)
+	GetCityByID(ctx context.Context, id int64) (City, error)
 	// Получает историю переписки между двумя пользователями
 	GetMessagesByUsers(ctx context.Context, arg GetMessagesByUsersParams) ([]GetMessagesByUsersRow, error)
 	GetOrderByID(ctx context.Context, id int64) (GetOrderByIDRow, error)
@@ -152,6 +155,7 @@ type Querier interface {
 	// Получает список доступных заказов для провайдера услуг
 	ListAvailableOrdersForProvider(ctx context.Context, arg ListAvailableOrdersForProviderParams) ([]ListAvailableOrdersForProviderRow, error)
 	ListBlockedUsers(ctx context.Context) ([]ListBlockedUsersRow, error)
+	ListCity(ctx context.Context) ([]City, error)
 	ListCountAvailableOrdersForProvider(ctx context.Context, providerID int64) (int64, error)
 	ListCountOrdersByClientID(ctx context.Context, clientID int64) (int64, error)
 	ListCountServicesByCatetegory(ctx context.Context, categoryID int64) (int64, error)
@@ -195,6 +199,7 @@ type Querier interface {
 	// Входные параметры: ID отклика
 	// Возвращает: количество обновленных строк (должно быть 1)
 	UnselectProviderForOrder(ctx context.Context, dollar_1 sql.NullInt64) (int64, error)
+	UpdateCity(ctx context.Context, arg UpdateCityParams) (City, error)
 	UpdateOrder(ctx context.Context, arg UpdateOrderParams) (Order, error)
 	// Обновляет информацию в существующем отклике
 	// Входные параметры: ID отклика, новое сообщение, новая предложенная цена

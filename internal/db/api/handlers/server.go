@@ -114,6 +114,9 @@ func (server *Server) setupServer() {
 	apiGroup.GET("/categories/:id", server.getCategoryByID)
 	apiGroup.GET("/services/list/category", server.listServiceByCategoryID)
 	apiGroup.GET("/categories/slug", server.getCategoryBySlug)
+	apiGroup.GET("/services/:id", server.getServiceByID)
+	apiGroup.GET("/subcategories", server.listSubtitleCategory)
+	apiGroup.GET("/users/profile", server.profileUser)
 
 	// Маршруты доступные всем авторизированным пользователям
 	authRoutes := apiGroup.Group("/auth")
@@ -132,9 +135,7 @@ func (server *Server) setupServer() {
 		string(sqlc.RoleAdmin),
 	))
 	// Добавьте здесь маршруты для клиентов
-	clientRoutes.GET("/subcategories", server.listSubtitleCategory)
 	clientRoutes.PUT("users/update", server.updateUser)
-	clientRoutes.GET("/users/profile", server.profileUser)
 	clientRoutes.POST("users/change-password", server.changePassword)
 	clientRoutes.POST("/orders", server.createOrder)
 	clientRoutes.GET("/orders/:id", server.getOrderByID)
@@ -148,7 +149,6 @@ func (server *Server) setupServer() {
 	clientRoutes.GET("/reviews/:id/rating", server.getAverageRatingForProvider)
 	clientRoutes.DELETE("/reviews/:id", server.deleteReview)
 	clientRoutes.GET("/reviews/list", server.getReviewsByThisProviderID)
-	clientRoutes.GET("/services/:id", server.getServiceByID)
 	clientRoutes.GET("/services/list", server.listService)
 	clientRoutes.GET("/services/list/provider", server.listServiceByProviderID)
 

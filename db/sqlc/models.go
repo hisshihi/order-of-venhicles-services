@@ -185,6 +185,11 @@ func (ns NullStatusSubscription) Value() (driver.Value, error) {
 	return string(ns.StatusSubscription), nil
 }
 
+type City struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
 type Favorite struct {
 	ID         int64     `json:"id"`
 	ClientID   int64     `json:"client_id"`
