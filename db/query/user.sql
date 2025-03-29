@@ -87,12 +87,12 @@ UPDATE users
 SET password_hash = $2,
     password_change_at = NOW()
 WHERE id = $1;
--- name: ListProviders :many
+-- name: ListPartners :many
 SELECT id,
     username,
     email
 FROM users
-WHERE role = 'provider';
+WHERE role = 'partner';
 -- name: BlockedUser :one
 UPDATE users
 SET is_blocked = true

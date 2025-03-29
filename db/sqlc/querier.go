@@ -164,10 +164,10 @@ type Querier interface {
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
 	// Проверка на блокировку провайдера, если он есть
 	ListOrdersByClientID(ctx context.Context, arg ListOrdersByClientIDParams) ([]ListOrdersByClientIDRow, error)
+	ListPartners(ctx context.Context) ([]ListPartnersRow, error)
 	ListPayments(ctx context.Context, arg ListPaymentsParams) ([]Payment, error)
 	ListPromoCodes(ctx context.Context, arg ListPromoCodesParams) ([]PromoCode, error)
 	ListPromoCodesByPartnerID(ctx context.Context, arg ListPromoCodesByPartnerIDParams) ([]PromoCode, error)
-	ListProviders(ctx context.Context) ([]ListProvidersRow, error)
 	ListReview(ctx context.Context, arg ListReviewParams) ([]Review, error)
 	ListServiceCategories(ctx context.Context) ([]ServiceCategory, error)
 	ListServices(ctx context.Context, arg ListServicesParams) ([]ListServicesRow, error)

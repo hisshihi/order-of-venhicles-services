@@ -321,29 +321,29 @@ func (q *Queries) ListBlockedUsers(ctx context.Context) ([]ListBlockedUsersRow, 
 	return items, nil
 }
 
-const listProviders = `-- name: ListProviders :many
+const listPartners = `-- name: ListPartners :many
 SELECT id,
     username,
     email
 FROM users
-WHERE role = 'provider'
+WHERE role = 'partner'
 `
 
-type ListProvidersRow struct {
+type ListPartnersRow struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
 }
 
-func (q *Queries) ListProviders(ctx context.Context) ([]ListProvidersRow, error) {
-	rows, err := q.db.QueryContext(ctx, listProviders)
+func (q *Queries) ListPartners(ctx context.Context) ([]ListPartnersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPartners)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListProvidersRow{}
+	items := []ListPartnersRow{}
 	for rows.Next() {
-		var i ListProvidersRow
+		var i ListPartnersRow
 		if err := rows.Scan(&i.ID, &i.Username, &i.Email); err != nil {
 			return nil, err
 		}

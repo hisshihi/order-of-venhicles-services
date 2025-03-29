@@ -95,7 +95,7 @@ func (server *Server) updateCurrentUsagePromoCode(ctx *gin.Context, promoCodeID 
 }
 
 type listPromoCodesRequest struct {
-	PageID int32 `form:"page_id" binding:"required,min=1"`
+	PageID   int32 `form:"page_id" binding:"required,min=1"`
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
 }
 
@@ -108,7 +108,7 @@ func (server *Server) listPromoCodes(ctx *gin.Context) {
 	}
 
 	arg := sqlc.ListPromoCodesParams{
-		Limit: int64(req.PageSize),
+		Limit:  int64(req.PageSize),
 		Offset: int64((req.PageID - 1) * req.PageSize),
 	}
 
@@ -125,7 +125,7 @@ func (server *Server) listPromoCodes(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"promo_codes": promoCodes,
+		"promo_codes":       promoCodes,
 		"promo_codes_count": countPromoCodes,
 	})
 }
@@ -145,8 +145,8 @@ func (server *Server) listPromoCodesByPartner(ctx *gin.Context) {
 
 	arg := sqlc.ListPromoCodesByPartnerIDParams{
 		PartnerID: user.ID,
-		Limit: int64(req.PageSize),
-		Offset: int64((req.PageID - 1) * req.PageSize),
+		Limit:     int64(req.PageSize),
+		Offset:    int64((req.PageID - 1) * req.PageSize),
 	}
 
 	promoCodes, err := server.store.ListPromoCodesByPartnerID(ctx, arg)
@@ -162,16 +162,17 @@ func (server *Server) listPromoCodesByPartner(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"promo_codes": promoCodes,
+		"promo_codes":       promoCodes,
 		"promo_codes_count": countPromoCodes,
 	})
 }
 
 // TODO: реализовать получение всех провайдеров использующих промокод партнёра
 type getAllProvidersByPartnerPromosRequest struct {
-	PageID int32 `form:"page_id" binding:"required,min=1"`
+	PageID   int32 `form:"page_id" binding:"required,min=1"`
 	PageSize int32 `form:"page_size" binding:"required,min=1,max=10"`
 }
+
 func (server *Server) getAllProvidersByPartnerPromos(ctx *gin.Context) {
 	var req getAllProvidersByPartnerPromosRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -187,8 +188,8 @@ func (server *Server) getAllProvidersByPartnerPromos(ctx *gin.Context) {
 
 	arg := sqlc.GetAllProvidersByPartnerPromosParams{
 		PartnerID: user.ID,
-		Limit: int64(req.PageSize),
-		Offset: int64((req.PageID - 1) * req.PageSize),
+		Limit:     int64(req.PageSize),
+		Offset:    int64((req.PageID - 1) * req.PageSize),
 	}
 
 	listPromoCodesByProviderID, err := server.store.GetAllProvidersByPartnerPromos(ctx, arg)
@@ -198,4 +199,28 @@ func (server *Server) getAllProvidersByPartnerPromos(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, listPromoCodesByProviderID)
+}
+
+type getPromoCodeByIDRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+func (server *Server) deletePromoCode(ctx *gin.Context) {
+	var req getPromoCodeByIDRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := server.store.DeletePromoCode(ctx, req.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
 }

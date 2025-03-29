@@ -728,14 +728,14 @@ func (server *Server) updateUserForAdmin(ctx *gin.Context) {
 	})
 }
 
-func (server *Server) listProviders(ctx *gin.Context) {
-	providers, err := server.store.ListProviders(ctx)
+func (server *Server) listPartners(ctx *gin.Context) {
+	partners, err := server.store.ListPartners(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, providers)
+	ctx.JSON(http.StatusOK, partners)
 }
 
 // Структура запроса с ID пользователя
@@ -798,8 +798,8 @@ func (server *Server) unblockUser(ctx *gin.Context) {
 
 	unblocked, err := server.store.UnblockUser(ctx, req.ID)
 	if err != nil {
-	    ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-	    return
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
