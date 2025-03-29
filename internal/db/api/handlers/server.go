@@ -117,6 +117,7 @@ func (server *Server) setupServer() {
 	apiGroup.GET("/services/:id", server.getServiceByID)
 	apiGroup.GET("/subcategories", server.listSubtitleCategory)
 	apiGroup.GET("/users/profile", server.profileUser)
+	apiGroup.GET("/city", server.listCity)
 
 	// Маршруты доступные всем авторизированным пользователям
 	authRoutes := apiGroup.Group("/auth")
@@ -220,6 +221,9 @@ func (server *Server) setupServer() {
 	adminRoutes.GET("/providers/list", server.listProviders)
 	adminRoutes.GET("/support-messages", server.listSupportMessages)
 	adminRoutes.DELETE("/support-messages/:id", server.deleteSupportMessage)
+	adminRoutes.POST("/city", server.createCity)
+	adminRoutes.PUT("/city/:id", server.updateCity)
+	adminRoutes.DELETE("/city/:id", server.deleteCity)
 
 	// ВТОРАЯ ЧАСТЬ: НАСТРОЙКА СТАТИЧЕСКИХ ФАЙЛОВ
 	// ----------------------------------------------------

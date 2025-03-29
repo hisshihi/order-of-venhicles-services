@@ -89,7 +89,7 @@ func (server *Server) updateCity(ctx *gin.Context) {
 
 func (server *Server) deleteCity(ctx *gin.Context) {
 	var req getCityByIDRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}

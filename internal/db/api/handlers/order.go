@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -228,10 +229,11 @@ func (server *Server) listOrders(ctx *gin.Context) {
 
 // listAvailableOrdersRequest представляет запрос на получение доступных заказов для провайдера
 type listAvailableOrdersRequest struct {
-	CategoryFilter    int64 `form:"category_filter"`
-	SubCategoryFilter int64 `form:"subcategory_filter"`
-	PageID            int32 `form:"page_id" binding:"required,min=1"`
-	PageSize          int32 `form:"page_size" binding:"required,min=5,max=10"`
+	CityFilter        string `form:"city_filter"`
+	CategoryFilter    int64  `form:"category_filter"`
+	SubCategoryFilter int64  `form:"subcategory_filter"`
+	PageID            int32  `form:"page_id" binding:"required,min=1"`
+	PageSize          int32  `form:"page_size" binding:"required,min=5,max=10"`
 }
 
 // listAvailableOrders обрабатывает запрос на получение доступных заказов для провайдера
@@ -269,34 +271,46 @@ func (server *Server) listAvailableOrders(ctx *gin.Context) {
 	}
 
 	resultOrders := []sqlc.ListAvailableOrdersForProviderRow{}
+	var wg sync.WaitGroup
+	resultChan := make(chan sqlc.ListAvailableOrdersForProviderRow, len(orders))
 
 	for _, order := range orders {
-		// Проверяем только город во всех случаях
-		if order.ClientCity.String != user.City.String {
-			continue
-		}
-
-		// Случай 1: Категория и подкатегория заданы (не "all")
-		if req.CategoryFilter != 0 && req.SubCategoryFilter != 0 {
-			// Мультифильтрация
-			if order.CategoryID == req.CategoryFilter && order.SubtitleCategoryID.Int64 == req.SubCategoryFilter {
-				resultOrders = append(resultOrders, order)
-			}
-			// Случай 2: Только категория задана (подкатегория = "all")
-		} else if req.CategoryFilter != 0 {
-			if order.CategoryID == req.CategoryFilter {
-				resultOrders = append(resultOrders, order)
-			}
-			// Случай 3: Только подкатегория задана (категория = "all")
-		} else if req.SubCategoryFilter != 0 {
-			if order.SubtitleCategoryID.Int64 == req.SubCategoryFilter {
-				resultOrders = append(resultOrders, order)
-			}
-			// Случай 4: Оба фильтра = "all" - выводим все заказы для города пользователя
-		} else {
-			resultOrders = append(resultOrders, order)
-		}
+		wg.Add(1)
+		go func(o sqlc.ListAvailableOrdersForProviderRow) {
+			defer wg.Done()
+			if (req.CityFilter == "" || req.CityFilter == o.ClientCity.String) &&
+           (req.CategoryFilter == 0 || o.CategoryID == req.CategoryFilter) &&
+           (req.SubCategoryFilter == 0 || o.SubtitleCategoryID.Int64 == req.SubCategoryFilter) {
+            resultChan <- o
+		   }
+		}(order)
 	}
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	for o := range resultChan {
+		resultOrders = append(resultOrders, o)
+	}
+
+	// for _, order := range orders {
+	// 	// Проверяем город
+	// 	if req.CityFilter != "" && req.CityFilter != order.ClientCity.String {
+	// 		continue
+	// 	}
+	// 	// Проверяем категорию
+	// 	if req.CategoryFilter != 0 && order.CategoryID != req.CategoryFilter {
+	// 		continue
+	// 	}
+	// 	// Проверяем подкатегорию
+	// 	if req.SubCategoryFilter != 0 && order.SubtitleCategoryID.Int64 != req.SubCategoryFilter {
+	// 		continue
+	// 	}
+	// 	// Если все фильтры пройдены, добавляем заказ
+	// 	resultOrders = append(resultOrders, order)
+	// }
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"orders":      resultOrders,
@@ -786,7 +800,7 @@ func (server *Server) deleteOrder(ctx *gin.Context) {
 
 	order, err := server.store.GetOrderByID(ctx, req.ID)
 	if err != nil {
-		if err ==sql.ErrNoRows {
+		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
