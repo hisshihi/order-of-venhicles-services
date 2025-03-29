@@ -64,6 +64,10 @@ func (server *Server) createSubscription(ctx *gin.Context) {
 		endDate = startDate.AddDate(1, 0, 0)
 		subscriptionType = "year"
 		standardPrice = 100000.0
+	case "contribution":
+		endDate = startDate.AddDate(120, 0, 0)
+		subscriptionType = "contribution"
+		standardPrice = 20000.0
 	}
 
 	finalPrice = standardPrice

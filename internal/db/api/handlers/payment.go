@@ -16,7 +16,7 @@ import (
 type createPaymentRequest struct {
 	Amount             string `json:"amount" binding:"required,min=1"`
 	PaymentMethod      string `json:"payment_method" binding:"required"`
-	SelectSubscription string `json:"select_subscription" binding:"required,oneof=14days month year"`
+	SelectSubscription string `json:"select_subscription" binding:"required,oneof=14days month year contribution"`
 	PromoCode          string `json:"promo_code"`
 	Payment            string `json:"payment" binding:"required,oneof=buy_sub update_sub"`
 }
@@ -350,6 +350,9 @@ func (server *Server) calculateSubscriptionDetails(ctx *gin.Context, userID int6
 	case "year":
 		details.EndDate = details.StartDate.AddDate(1, 0, 0)
 		details.OriginalPrice = 100000.0
+	case "contribution":
+		details.EndDate = details.StartDate.AddDate(120, 0, 0)
+		details.OriginalPrice = 20000.0
 	default:
 		return details, errors.New("некорректный тип подписки")
 	}
