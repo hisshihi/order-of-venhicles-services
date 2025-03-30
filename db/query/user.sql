@@ -79,6 +79,20 @@ SET username = $2,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
+-- name: UpdateUserForAdmin :one
+UPDATE users
+SET username = $2,
+    email = $3,
+    country = $4,
+    city = $5,
+    district = $6,
+    phone = $7,
+    whatsapp = $8,
+    photo_url = $9,
+    role = $10,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = $1;

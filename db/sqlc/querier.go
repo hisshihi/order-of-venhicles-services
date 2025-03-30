@@ -214,6 +214,7 @@ type Querier interface {
 	UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error)
 	UpdateSubtitleCategory(ctx context.Context, arg UpdateSubtitleCategoryParams) (SubtitleCategory, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserForAdmin(ctx context.Context, arg UpdateUserForAdminParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

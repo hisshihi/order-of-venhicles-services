@@ -630,3 +630,68 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	)
 	return i, err
 }
+
+const updateUserForAdmin = `-- name: UpdateUserForAdmin :one
+UPDATE users
+SET username = $2,
+    email = $3,
+    country = $4,
+    city = $5,
+    district = $6,
+    phone = $7,
+    whatsapp = $8,
+    photo_url = $9,
+    role = $10,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, username, email, password_hash, password_change_at, role, country, city, district, phone, whatsapp, created_at, updated_at, photo_url, description, is_verified, is_blocked
+`
+
+type UpdateUserForAdminParams struct {
+	ID       int64          `json:"id"`
+	Username string         `json:"username"`
+	Email    string         `json:"email"`
+	Country  sql.NullString `json:"country"`
+	City     sql.NullString `json:"city"`
+	District sql.NullString `json:"district"`
+	Phone    string         `json:"phone"`
+	Whatsapp string         `json:"whatsapp"`
+	PhotoUrl []byte         `json:"photo_url"`
+	Role     NullRole       `json:"role"`
+}
+
+func (q *Queries) UpdateUserForAdmin(ctx context.Context, arg UpdateUserForAdminParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserForAdmin,
+		arg.ID,
+		arg.Username,
+		arg.Email,
+		arg.Country,
+		arg.City,
+		arg.District,
+		arg.Phone,
+		arg.Whatsapp,
+		arg.PhotoUrl,
+		arg.Role,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.PasswordHash,
+		&i.PasswordChangeAt,
+		&i.Role,
+		&i.Country,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Whatsapp,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PhotoUrl,
+		&i.Description,
+		&i.IsVerified,
+		&i.IsBlocked,
+	)
+	return i, err
+}

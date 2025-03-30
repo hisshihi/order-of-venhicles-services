@@ -643,9 +643,10 @@ type updateUserForAdminRequest struct {
 	Phone    string                `form:"phone" binding:"required"`
 	Whatsapp string                `form:"whatsapp" binding:"required"`
 	PhotoUrl *multipart.FileHeader `form:"photo_url"`
+	Role     *string               `form:"role"`
 }
 
-// Обнолвение пользователя
+// Обновление пользователя
 func (server *Server) updateUserForAdmin(ctx *gin.Context) {
 	var req updateUserForAdminRequest
 	if err := ctx.ShouldBindWith(&req, binding.FormMultipart); err != nil {
@@ -656,54 +657,69 @@ func (server *Server) updateUserForAdmin(ctx *gin.Context) {
 
 	user, err := server.store.GetUserByID(ctx, req.ID)
 	if err != nil {
+		// Добавляем обработку ошибки
+		log.Println("Ошибка получения пользователя:", err)
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
 
 	var photoBytes []byte
-	if req.PhotoUrl.Header != nil {
-		if req.PhotoUrl != nil {
-			log.Println("Файл загружен:", req.PhotoUrl.Filename)
-			if req.PhotoUrl.Size > 3*1024*1024 {
-				ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("размер файла превышает 3МБ")))
-				return
-			}
+	// Исправляем проверку файла (порядок условий важен!)
+	if req.PhotoUrl != nil && req.PhotoUrl.Filename != "" {
+		log.Println("Файл загружен:", req.PhotoUrl.Filename)
+		
+		if req.PhotoUrl.Size > 3*1024*1024 {
+			ctx.JSON(http.StatusBadRequest, errorResponse(
+				errors.New("размер файла превышает 3МБ"),
+			))
+			return
+		}
 
-			file, err := req.PhotoUrl.Open()
-			if err != nil {
-				log.Println("Ошибка открытия файла:", err)
-				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-				return
-			}
-			defer file.Close()
+		file, err := req.PhotoUrl.Open()
+		if err != nil {
+			log.Println("Ошибка открытия файла:", err)
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
+		}
+		defer file.Close()
 
-			photoBytes, err = io.ReadAll(file)
-			if err != nil {
-				log.Println("Ошибка чтения файла:", err)
-				ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-				return
-			}
-			log.Println("Размер файла:", len(photoBytes))
-		} else {
-			log.Println("Файл не передан")
-			photoBytes = user.PhotoUrl
+		photoBytes, err = io.ReadAll(file)
+		if err != nil {
+			log.Println("Ошибка чтения файла:", err)
+			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+			return
 		}
 	} else {
+		// Используем существующее фото
 		photoBytes = user.PhotoUrl
 	}
 
-	arg := sqlc.UpdateUserParams{
+	arg := sqlc.UpdateUserForAdminParams{
 		ID:       user.ID,
 		Username: req.Username,
 		Email:    req.Email,
-		Country:  sql.NullString{String: *req.Country, Valid: req.Country != nil},
-		City:     sql.NullString{String: *req.City, Valid: req.City != nil},
-		District: sql.NullString{String: *req.District, Valid: req.District != nil},
+		Country: sql.NullString{
+			String: getStringValue(req.Country, user.Country.String),
+			Valid:  req.Country != nil,
+		},
+		City: sql.NullString{
+			String: getStringValue(req.City, user.City.String),
+			Valid:  req.City != nil,
+		},
+		District: sql.NullString{
+			String: getStringValue(req.District, user.District.String),
+			Valid:  req.District != nil,
+		},
 		Phone:    req.Phone,
 		Whatsapp: req.Whatsapp,
 		PhotoUrl: photoBytes,
+		Role: sqlc.NullRole{
+			Role:  getRoleValue(req.Role, user.Role.Role),
+			Valid: req.Role != nil,
+		},
 	}
 
-	updateUser, err := server.store.UpdateUser(ctx, arg)
+	updateUser, err := server.store.UpdateUserForAdmin(ctx, arg)
 	if err != nil {
 		log.Println("Ошибка обновления:", err)
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
@@ -723,9 +739,22 @@ func (server *Server) updateUserForAdmin(ctx *gin.Context) {
 		Role:     string(updateUser.Role.Role),
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"user": rsp,
-	})
+	ctx.JSON(http.StatusOK, gin.H{"user": rsp})
+}
+
+// Вспомогательные функции
+func getStringValue(ptr *string, value string) string {
+	if ptr != nil {
+		return *ptr
+	}
+	return value
+}
+
+func getRoleValue(ptr *string, role sqlc.Role) sqlc.Role {
+	if ptr != nil {
+		return sqlc.Role(*ptr)
+	}
+	return sqlc.Role(role) // Или значение по умолчанию
 }
 
 func (server *Server) listPartners(ctx *gin.Context) {
