@@ -14,7 +14,7 @@ import (
 type createServiceRequest struct {
 	CategoryID    int64  `json:"category_id" binding:"required,min=1"`
 	SubCategoryID int64  `json:"subcategory_id" binding:"required,min=1"`
-	Title         string `json:"title" binding:"required,min=5"`
+	Title         string `json:"title" binding:"required,min=1"`
 	Description   string `json:"description" binding:"required"`
 	Price         string `json:"price" binding:"required"`
 	Country       string `json:"country" binding:"required"`
@@ -401,8 +401,8 @@ func (server *Server) listServiceForAdmin(ctx *gin.Context) {
 type updateServiceRequest struct {
 	CategoryID    int64  `json:"category_id" binding:"min=1,required"`
 	SubCategoryID int64  `json:"subcategory_id" binding:"min=1,required"`
-	Title         string `json:"title" binding:"required,min=5"`
-	Description   string `json:"description" binding:"required,min=10"`
+	Title         string `json:"title" binding:"required,min=1"`
+	Description   string `json:"description" binding:"required,min=1"`
 	Price         string `json:"price" binding:"required"`
 	Country       string `json:"country" binding:"required"`
 	City          string `json:"city" binding:"required"`
